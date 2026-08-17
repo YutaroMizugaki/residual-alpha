@@ -1,73 +1,45 @@
 # residual-alpha
 
-## 概要
+Fixture MVP of a residual-income ranking. Python computes valuation; Next.js displays static JSON.
 
-residual-alpha は実験的なプロジェクトです。ここにはプロジェクトの目的、実装方針、主要機能を簡潔に書きます。
+**Current status: Fixture MVP.** Tickers and numbers are fictional test data, not live market prices.
 
-> このリポジトリの詳細な説明をまだ受け取っていないため、README はテンプレートになっています。必要に応じて内容を編集してください。
+## Architecture
 
-## 特徴
-
-- 説明的な1行要約をここに書く
-- 主要機能や設計上のポイントを箇条書きで記載する
-
-## 必要条件
-
-- OS: macOS / Linux / Windows
-- 言語ランタイムやツール（例: Node.js, Python, Docker など）
-
-具体的な依存関係はプロジェクト内容に応じてここに追記してください。
-
-## インストール
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/YutaroMizugaki/residual-alpha.git
-cd residual-alpha
-
-# 例: Python の場合
-# python -m venv .venv
-# source .venv/bin/activate
-# pip install -r requirements.txt
-
-# 例: Node.js の場合
-# npm install
+```text
+Fixture → Python quant engine → public/data JSON → Next.js
 ```
 
-## 使い方
+No database, no backend API, no live market feed.
 
-簡単な実行例・コマンドをここに示します。
+Units: book value in million JPY, shares in million shares, prices in JPY/share, rates as decimals (`0.15` = 15%). Details: `docs/architecture.md`, `docs/methodology.md`.
 
-```bash
-# 例: 開発サーバー起動
-# make dev
-# or
-# npm start
-```
-
-## 開発
-
-開発フローやテストの実行方法を記載します。
+## Setup
 
 ```bash
-# テスト実行例
-# pytest
-# or
-# npm test
+python -m pip install -r requirements.txt
+npm install
 ```
 
-## 貢献
+## Test
 
-プルリクエスト、Issue、改善提案を歓迎します。貢献ガイド（CONTRIBUTING.md）があればここにリンクを貼ってください。
+```bash
+pytest
+```
 
-## ライセンス
+## Build public data
 
-このリポジトリのライセンスをここに記載してください（例: MIT）。
+```bash
+python scripts/build_public_data.py
+```
 
-## 作者
+Writes `public/data/rankings.json` and `public/data/stocks/*.json`.
 
-- YutaroMizugaki
+## Run frontend
 
----
+```bash
+python scripts/build_public_data.py
+npm run dev
+```
 
-README のテンプレートを作成しました。具体的な説明やコマンド、依存関係を教えていただければ、README を詳細に整備します。
+Then open `/ranking` and `/stocks/1001`.
