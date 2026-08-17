@@ -6,15 +6,17 @@ from pathlib import Path
 import pytest
 
 from providers.errors import BotWallError, InvalidPriceDataError
-from providers.http import cache_filename, fetch_yahoo_chart_json
+from providers.http import cache_filename, fetch_yahoo_chart_json, fetch_yahoo_fundamentals_json
 from providers.loader import load_fixture_snapshot, load_free_snapshot
 from providers.series import aligned_simple_returns
 from providers.stooq_csv import parse_stooq_csv
 from providers.yahoo_chart import parse_yahoo_chart
+from providers.yahoo_fundamentals import parse_yahoo_fundamentals
 from models.pipeline import evaluate_universe
 
 ROOT = Path(__file__).resolve().parents[1]
 YAHOO_DIR = ROOT / "tests" / "data" / "yahoo"
+FUND_DIR = ROOT / "tests" / "data" / "yahoo_fundamentals"
 STOOQ_DIR = ROOT / "tests" / "data" / "stooq"
 
 
@@ -91,13 +93,18 @@ def test_cache_filename_strips_caret():
 
 
 def test_free_provider_prices_without_fundamentals_are_not_zero(tmp_path: Path):
-    snapshot = load_free_snapshot(raw_dir=YAHOO_DIR, fetch=False)
+    snapshot = load_free_snapshot(
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=tmp_path,
+        fetch=False,
+    )
     by_ticker = {row["ticker"]: row for row in snapshot.stocks}
     toyota = by_ticker["7203"]
     assert toyota["price"] == pytest.approx(3013.0)
     assert toyota["priceAsOf"] is not None
     assert toyota["bookValue"] is None
     assert toyota["latestRoe"] is None
+    assert snapshot.fundamentals_source == "missing"
     assert toyota["stockReturns"]
     assert toyota["marketReturns"]
     assert len(toyota["stockReturns"]) == len(toyota["marketReturns"])
@@ -130,11 +137,13 @@ def test_free_provider_with_fundamentals_can_value(tmp_path: Path):
     )
     snapshot = load_free_snapshot(
         raw_dir=YAHOO_DIR,
+        fundamentals_dir=tmp_path / "empty-fund",
         fetch=False,
         fundamentals_path=overlay,
     )
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     toyota = next(row for row in computed if row["ticker"] == "7203")
+    assert snapshot.fundamentals_source == "manual_overlay"
     assert toyota["eligible"] is True
     assert toyota["intrinsicPrice"] is not None
     assert toyota["forecast"][9]["roe"] == toyota["costOfEquity"]
@@ -164,3 +173,133 @@ def test_non_jpy_rejected():
     }
     with pytest.raises(InvalidPriceDataError, match="JPY"):
         parse_yahoo_chart(payload)
+
+
+def test_yahoo_fundamentals_toyota_units_and_beginning_roe():
+    payload = json.loads((FUND_DIR / "7203.T.json").read_text(encoding="utf-8"))
+    fundamentals = parse_yahoo_fundamentals(payload)
+    assert fundamentals.book_value == pytest.approx(39_918_854.0)
+    assert fundamentals.shares_outstanding == pytest.approx(13_033.384474)
+    assert fundamentals.fiscal_year_end == "2026-03-31"
+    assert fundamentals.roe_history is not None
+    assert len(fundamentals.roe_history) == 3
+    expected_latest = 3_848_098_000_000.0 / 35_924_826_000_000.0
+    assert fundamentals.latest_roe == pytest.approx(expected_latest)
+    assert fundamentals.roe_history[-1] == pytest.approx(expected_latest)
+
+
+def test_yahoo_fundamentals_missing_year_not_zero():
+    payload = json.loads((FUND_DIR / "missing_year.json").read_text(encoding="utf-8"))
+    fundamentals = parse_yahoo_fundamentals(payload)
+    assert fundamentals.book_value == pytest.approx(1_300.0)
+    assert fundamentals.roe_history is not None
+    assert 0 not in fundamentals.roe_history
+    assert None not in fundamentals.roe_history
+    # 2025 is missing, so 2026 is not computed off 2024 equity.
+    assert len(fundamentals.roe_history) == 1
+    assert fundamentals.roe_history[0] == pytest.approx(0.12)
+
+
+def test_yahoo_fundamentals_html_is_bot_wall():
+    with pytest.raises(BotWallError):
+        parse_yahoo_fundamentals("<html>verify your browser</html>")
+
+
+def test_sony_negative_income_is_not_coerced_to_zero():
+    payload = json.loads((FUND_DIR / "6758.T.json").read_text(encoding="utf-8"))
+    fundamentals = parse_yahoo_fundamentals(payload)
+    assert fundamentals.latest_roe is not None
+    assert fundamentals.latest_roe < 0
+
+
+def test_free_snapshot_with_recorded_fundamentals_ranks(tmp_path: Path):
+    snapshot = load_free_snapshot(
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=FUND_DIR,
+        fetch=False,
+        fundamentals_path=tmp_path / "empty.json",
+    )
+    assert snapshot.fundamentals_source == "yahoo_timeseries"
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
+    by_ticker = {row["ticker"]: row for row in computed}
+    toyota = by_ticker["7203"]
+    assert toyota["eligible"] is True
+    assert toyota["rank"] is not None
+    assert toyota["bookValue"] == pytest.approx(39_918_854.0)
+    assert toyota["forecast"][9]["roe"] == toyota["costOfEquity"]
+    sony = by_ticker["6758"]
+    assert sony["eligible"] is True
+    assert sony["latestRoe"] < 0
+    softbank = by_ticker["9984"]
+    assert softbank["eligible"] is True
+    ranked = [row["ticker"] for row in computed if row["rank"] is not None]
+    assert set(ranked) == {"7203", "6758", "9984"}
+    assert toyota["fundamentalsAsOf"] == "2026-03-31"
+
+
+def test_overlay_does_not_overwrite_yahoo_fundamentals(tmp_path: Path):
+    overlay = tmp_path / "fundamentals.json"
+    overlay.write_text(
+        json.dumps(
+            {
+                "stocks": {
+                    "7203": {
+                        "bookValue": 1,
+                        "sharesOutstanding": 1,
+                        "latestRoe": 0.99,
+                        "roeHistory": [0.99, 0.99, 0.99],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    snapshot = load_free_snapshot(
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=FUND_DIR,
+        fetch=False,
+        fundamentals_path=overlay,
+    )
+    toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
+    assert toyota["bookValue"] == pytest.approx(39_918_854.0)
+    assert toyota["latestRoe"] != pytest.approx(0.99)
+    assert snapshot.fundamentals_source == "yahoo_timeseries"
+
+
+def test_fetch_yahoo_fundamentals_does_not_hit_network_when_injected():
+    def fake_fetch(url: str) -> tuple[int, str, str]:
+        assert "7203.T" in url
+        assert "annualStockholdersEquity" in url
+        return 200, "application/json", (FUND_DIR / "7203.T.json").read_text(encoding="utf-8")
+
+    payload = fetch_yahoo_fundamentals_json("7203.T", fetcher=fake_fetch)
+    fundamentals = parse_yahoo_fundamentals(payload)
+    assert fundamentals.book_value == pytest.approx(39_918_854.0)
+
+
+def test_fetch_yahoo_fundamentals_html_status_is_error():
+    def fake_fetch(url: str) -> tuple[int, str, str]:
+        return 200, "text/html", "<html>verify</html>"
+
+    with pytest.raises(BotWallError):
+        fetch_yahoo_fundamentals_json("7203.T", fetcher=fake_fetch)
+
+
+def test_yahoo_fundamentals_non_jpy_equity_rejected():
+    payload = {
+        "timeseries": {
+            "result": [
+                {
+                    "annualStockholdersEquity": [
+                        {
+                            "asOfDate": "2026-03-31",
+                            "currencyCode": "USD",
+                            "reportedValue": {"raw": 1.0},
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+    with pytest.raises(InvalidPriceDataError, match="JPY"):
+        parse_yahoo_fundamentals(payload)

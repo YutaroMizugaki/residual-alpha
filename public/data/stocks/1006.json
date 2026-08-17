@@ -3,6 +3,7 @@
   "companyName": "Missing Data",
   "price": null,
   "priceAsOf": null,
+  "fundamentalsAsOf": null,
   "betaRaw": null,
   "betaAdjusted": null,
   "betaStatus": "missing",

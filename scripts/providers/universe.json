@@ -9,7 +9,7 @@
   "notes": [
     "Yahoo symbols use .T for TSE. Market is Nikkei 225.",
     "Stooq live HTTP is not used; it is bot-walled from automated clients.",
-    "EDINET and J-Quants are not called here; they require API keys."
+    "Fundamentals come from Yahoo annual timeseries, not EDINET/J-Quants."
   ],
   "stocks": [
     {

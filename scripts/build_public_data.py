@@ -32,13 +32,21 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", choices=("fixture", "free"), default="fixture")
     parser.add_argument("--raw-dir", default=str(ROOT / "data" / "raw" / "yahoo"))
-    parser.add_argument("--fetch", action="store_true", help="free source only: download Yahoo chart JSON")
+    parser.add_argument(
+        "--fundamentals-dir",
+        default=str(ROOT / "data" / "raw" / "yahoo_fundamentals"),
+    )
+    parser.add_argument("--fetch", action="store_true", help="free source only: download Yahoo JSON")
     args = parser.parse_args()
 
     if args.source == "fixture":
         snapshot = load_fixture_snapshot()
     else:
-        snapshot = load_free_snapshot(raw_dir=Path(args.raw_dir), fetch=args.fetch)
+        snapshot = load_free_snapshot(
+            raw_dir=Path(args.raw_dir),
+            fundamentals_dir=Path(args.fundamentals_dir),
+            fetch=args.fetch,
+        )
 
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     rankings = [ranking_row(row) for row in computed]

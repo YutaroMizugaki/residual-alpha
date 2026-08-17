@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import Callable
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 from providers.errors import BotWallError, FetchError
@@ -60,6 +60,55 @@ def fetch_yahoo_chart_json(
         payload = json.loads(body)
     except json.JSONDecodeError as exc:
         raise FetchError(f"Yahoo chart JSON decode failed for {symbol}") from exc
+    return payload
+
+
+FUNDAMENTALS_TYPES = ",".join(
+    [
+        "annualStockholdersEquity",
+        "annualNetIncomeCommonStockholders",
+        "annualOrdinarySharesNumber",
+    ]
+)
+# Wide window so newly reported fiscal years are included without a code change.
+YAHOO_FUNDAMENTALS_PERIOD1 = 1483228800  # 2017-01-01 UTC
+YAHOO_FUNDAMENTALS_PERIOD2 = 1893456000  # 2030-01-01 UTC
+
+
+def yahoo_fundamentals_url(
+    symbol: str,
+    *,
+    period1: int = YAHOO_FUNDAMENTALS_PERIOD1,
+    period2: int = YAHOO_FUNDAMENTALS_PERIOD2,
+) -> str:
+    query = urlencode(
+        {
+            "symbol": symbol,
+            "type": FUNDAMENTALS_TYPES,
+            "period1": str(period1),
+            "period2": str(period2),
+        }
+    )
+    return (
+        "https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/"
+        f"{quote(symbol, safe='')}?{query}"
+    )
+
+
+def fetch_yahoo_fundamentals_json(
+    symbol: str,
+    *,
+    fetcher: Fetcher | None = None,
+) -> dict:
+    fetch = fetcher or default_fetcher
+    status, content_type, body = fetch(yahoo_fundamentals_url(symbol))
+    if status != 200:
+        raise FetchError(f"Yahoo fundamentals HTTP {status} for {symbol}")
+    reject_html(body, content_type)
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise FetchError(f"Yahoo fundamentals JSON decode failed for {symbol}") from exc
     return payload
 
 

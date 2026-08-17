@@ -59,4 +59,5 @@ export type StockDetail = {
   exclusionReasons: ExclusionReason[];
   forecast: ForecastYear[];
   priceAsOf?: string | null;
+  fundamentalsAsOf?: string | null;
 };

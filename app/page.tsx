@@ -19,7 +19,8 @@ export default async function HomePage() {
         <li>Default build is fixture data (deterministic, used by CI)</li>
         <li>
           Free Data Provider can load TSE prices from the Yahoo Finance chart
-          API (no API key, no yfinance package)
+          API and annual equity/income/shares from Yahoo timeseries (no API
+          key, no yfinance package)
         </li>
         <li>EDINET / J-Quants are not fetched (API keys required)</li>
         <li>No database or backend API</li>

@@ -2,7 +2,7 @@
 
 Residual-income ranking. Python computes valuation; Next.js displays static JSON.
 
-**Current status:** Fixture MVP + Free Data Provider (prices only).
+**Current status:** Fixture MVP + Free Data Provider (Yahoo chart prices and Yahoo annual fundamentals).
 
 Displayed data follows `public/data/meta.json`. The committed site is fixture data (fictional tickers). Free prices are opt-in and not used by CI.
 
@@ -39,14 +39,15 @@ python scripts/build_public_data.py
 
 Writes `public/data/rankings.json`, `public/data/meta.json`, and `public/data/stocks/*.json`.
 
-## Free prices (optional, not CI)
+## Free data (optional, not CI)
 
 ```bash
 python scripts/fetch_free_data.py
 python scripts/build_public_data.py --source free
 ```
 
-Fundamentals are not fetched. Names without book value/ROE are excluded from ranking. Missing is not replaced with 0.
+Prices from Yahoo chart; fundamentals from Yahoo annual timeseries.
+Missing values are not replaced with 0. Not investment advice.
 
 ## Run frontend
 

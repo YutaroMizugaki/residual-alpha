@@ -3,6 +3,7 @@
   "companyName": "Cheap Value",
   "price": 480.0,
   "priceAsOf": null,
+  "fundamentalsAsOf": null,
   "betaRaw": 0.95,
   "betaAdjusted": 0.9665,
   "betaStatus": "valid",

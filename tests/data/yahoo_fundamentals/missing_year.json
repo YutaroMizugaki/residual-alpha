@@ -1,0 +1,96 @@
+{
+  "timeseries": {
+    "result": [
+      {
+        "meta": {
+          "type": [
+            "annualStockholdersEquity"
+          ]
+        },
+        "annualStockholdersEquity": [
+          {
+            "asOfDate": "2023-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": 1000000000.0
+            }
+          },
+          {
+            "asOfDate": "2024-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": 1100000000.0
+            }
+          },
+          {
+            "asOfDate": "2025-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": null
+            }
+          },
+          {
+            "asOfDate": "2026-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": 1300000000.0
+            }
+          }
+        ]
+      },
+      {
+        "meta": {
+          "type": [
+            "annualNetIncomeCommonStockholders"
+          ]
+        },
+        "annualNetIncomeCommonStockholders": [
+          {
+            "asOfDate": "2023-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": 100000000.0
+            }
+          },
+          {
+            "asOfDate": "2024-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": 120000000.0
+            }
+          },
+          {
+            "asOfDate": "2025-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": null
+            }
+          },
+          {
+            "asOfDate": "2026-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": 150000000.0
+            }
+          }
+        ]
+      },
+      {
+        "meta": {
+          "type": [
+            "annualOrdinarySharesNumber"
+          ]
+        },
+        "annualOrdinarySharesNumber": [
+          {
+            "asOfDate": "2026-03-31",
+            "currencyCode": "JPY",
+            "reportedValue": {
+              "raw": 100000000.0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

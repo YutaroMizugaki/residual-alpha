@@ -19,7 +19,9 @@ Provider snapshot
 
 TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or scores.
 
-Default provider is **fixture** (fictional issuers). Optional **free** provider loads TSE prices from the Yahoo Finance chart API. See `docs/providers.md`.
+Default provider is **fixture** (fictional issuers). Optional **free** provider
+loads TSE prices from the Yahoo Finance chart API and annual fundamentals from
+the Yahoo timeseries API (equity, net income, shares). See `docs/providers.md`.
 
 ## What this phase does not include
 
@@ -38,10 +40,10 @@ No trading
 ## Layout
 
 - `scripts/models/` — valuation math
-- `scripts/providers/` — fixture + free price snapshots
+- `scripts/providers/` — fixture + free Yahoo price/fundamentals snapshots
 - `scripts/fixtures/stocks.json` — fictional inputs
 - `scripts/build_public_data.py` — writes `public/data/`
-- `scripts/fetch_free_data.py` — optional Yahoo chart download
+- `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
 - `tests/` — pytest (no live network)
 - `app/`, `components/`, `lib/` — Next.js display only
 

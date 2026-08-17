@@ -112,7 +112,11 @@ export default async function StockPage({ params }: PageProps) {
         <MetricCard
           label="Book Value"
           value={formatNumber(stock.bookValue, 0)}
-          hint="million JPY"
+          hint={
+            stock.fundamentalsAsOf
+              ? `million JPY · FY ${stock.fundamentalsAsOf}`
+              : "million JPY"
+          }
         />
         <MetricCard
           label="Shares"
