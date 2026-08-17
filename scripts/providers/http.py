@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from datetime import date, timedelta
 from typing import Callable
+from urllib.error import HTTPError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
@@ -20,6 +22,16 @@ DEFAULT_HEADERS = {
     "Accept": "application/json,text/csv,text/plain;q=0.9,*/*;q=0.8",
 }
 
+# Free plan is 5 req/min. Live J-Quants calls share this interval.
+JQUANTS_MIN_INTERVAL_SEC = 13.0
+JQUANTS_RATE_LIMIT_WAIT_SEC = 70.0
+_JQUANTS_HOST = "api.jquants.com"
+_last_jquants_request_at = 0.0
+_SUBSCRIPTION_DATES = re.compile(
+    r"covers the following dates:\s*(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})",
+    re.IGNORECASE,
+)
+
 JQUANTS_SUMMARY_URL = "https://api.jquants.com/v2/fins/summary"
 JQUANTS_BARS_URL = "https://api.jquants.com/v2/equities/bars/daily"
 EDINET_DOCUMENTS_URL = "https://api.edinet-fsa.go.jp/api/v2/documents.json"
@@ -31,18 +43,79 @@ def redact_url(url: str) -> str:
     return redacted
 
 
-def default_fetcher(url: str, extra_headers: dict[str, str] | None = None) -> tuple[int, str, str]:
-    request = Request(url, headers={**DEFAULT_HEADERS, **(extra_headers or {})})
+def _pace_jquants(url: str) -> None:
+    global _last_jquants_request_at
+    if _JQUANTS_HOST not in url:
+        return
+    wait = JQUANTS_MIN_INTERVAL_SEC - (time.monotonic() - _last_jquants_request_at)
+    if wait > 0:
+        time.sleep(wait)
+
+
+def parse_jquants_subscription_window(body: str) -> tuple[str, str] | None:
+    """Parse free-plan covered dates from a 400 body. Missing stays missing."""
+    text = body
     try:
-        with urlopen(request, timeout=20) as response:
-            status = int(getattr(response, "status", 200))
-            content_type = str(response.headers.get("Content-Type") or "")
-            body = response.read().decode("utf-8", errors="replace")
-            return status, content_type, body
-    except FetchError:
-        raise
-    except Exception as exc:  # noqa: BLE001 — network failures become FetchError
-        raise FetchError(f"request failed: {redact_url(url)}") from exc
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        payload = None
+    if isinstance(payload, dict):
+        message = payload.get("message")
+        if isinstance(message, str) and message.strip():
+            text = message
+    match = _SUBSCRIPTION_DATES.search(text)
+    if not match:
+        return None
+    return match.group(1), match.group(2)
+
+
+def clamp_jquants_bars_window(
+    from_: str | None,
+    to: str | None,
+    covered_from: str,
+    covered_to: str,
+) -> tuple[str, str]:
+    """Intersect a requested bars window with the plan's covered dates."""
+    start = covered_from if from_ is None or from_ < covered_from else from_
+    end = covered_to if to is None or to > covered_to else to
+    if start > end:
+        return covered_from, covered_to
+    return start, end
+
+
+def default_fetcher(url: str, extra_headers: dict[str, str] | None = None) -> tuple[int, str, str]:
+    global _last_jquants_request_at
+    is_jquants = _JQUANTS_HOST in url
+    last_http_error: tuple[int, str, str] | None = None
+    for attempt in range(4):
+        if is_jquants:
+            _pace_jquants(url)
+        request = Request(url, headers={**DEFAULT_HEADERS, **(extra_headers or {})})
+        try:
+            with urlopen(request, timeout=20) as response:
+                if is_jquants:
+                    _last_jquants_request_at = time.monotonic()
+                status = int(getattr(response, "status", 200))
+                content_type = str(response.headers.get("Content-Type") or "")
+                body = response.read().decode("utf-8", errors="replace")
+                return status, content_type, body
+        except HTTPError as exc:
+            if is_jquants:
+                _last_jquants_request_at = time.monotonic()
+            content_type = str(exc.headers.get("Content-Type") if exc.headers else "")
+            body = exc.read().decode("utf-8", errors="replace")
+            last_http_error = (int(exc.code), content_type, body)
+            if exc.code == 429 and attempt < 3:
+                time.sleep(JQUANTS_RATE_LIMIT_WAIT_SEC)
+                continue
+            return last_http_error
+        except FetchError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — network failures become FetchError
+            raise FetchError(f"request failed: {redact_url(url)}") from exc
+    if last_http_error is not None:
+        return last_http_error
+    raise FetchError(f"request failed: {redact_url(url)}")
 
 
 def reject_html(body: str, content_type: str) -> None:
@@ -225,19 +298,36 @@ def fetch_jquants_bars_json(
     """
     rows: list[object] = []
     pagination_key: str | None = None
+    window_from, window_to = from_, to
+    clamped = False
+    dropped_window = False
     key = api_key if api_key is not None else os.environ.get("JQUANTS_API_KEY")
     extra = {"x-api-key": key, "Accept": "application/json"} if fetcher is None else None
     if fetcher is None and not key:
         raise FetchError("JQUANTS_API_KEY is not set")
 
     for _ in range(20):
-        url = jquants_bars_url(code, from_=from_, to=to, pagination_key=pagination_key)
+        url = jquants_bars_url(
+            code, from_=window_from, to=window_to, pagination_key=pagination_key
+        )
         if fetcher is None:
             status, content_type, body = default_fetcher(url, extra_headers=extra)
         else:
             status, content_type, body = fetcher(url)
         if status in (401, 403):
             raise FetchError(f"J-Quants HTTP {status} for {code}")
+        if status == 400 and pagination_key is None:
+            covered = parse_jquants_subscription_window(body)
+            if covered and not clamped:
+                window_from, window_to = clamp_jquants_bars_window(
+                    window_from, window_to, covered[0], covered[1]
+                )
+                clamped = True
+                continue
+            if (window_from or window_to) and not dropped_window:
+                window_from, window_to = None, None
+                dropped_window = True
+                continue
         if status != 200:
             raise FetchError(f"J-Quants HTTP {status} for {code}")
         reject_html(body, content_type)

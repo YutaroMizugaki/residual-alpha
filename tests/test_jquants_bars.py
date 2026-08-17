@@ -7,7 +7,13 @@ import pytest
 
 from models.pipeline import evaluate_universe
 from providers.errors import BotWallError, FetchError, InvalidPriceDataError
-from providers.http import fetch_jquants_bars_json, jquants_bars_url
+from providers.http import (
+    clamp_jquants_bars_window,
+    default_fetcher,
+    fetch_jquants_bars_json,
+    jquants_bars_url,
+    parse_jquants_subscription_window,
+)
 from providers.jquants_bars import parse_jquants_bars
 from providers.loader import (
     JQUANTS_FREE_LAG_NOTE,
@@ -123,6 +129,110 @@ def test_fetch_jquants_bars_401_is_fetch_error():
 
     with pytest.raises(FetchError, match="401"):
         fetch_jquants_bars_json("72030", fetcher=fake_fetch)
+
+
+def test_parse_jquants_subscription_window():
+    body = (
+        '{"message": "Your subscription covers the following dates: '
+        '2024-05-25 ~ 2026-05-25. If you want more data, please check other plans:'
+        'https://jpx-jquants.com/#dataset"}'
+    )
+    assert parse_jquants_subscription_window(body) == ("2024-05-25", "2026-05-25")
+    assert parse_jquants_subscription_window('{"message":"nope"}') is None
+
+
+def test_clamp_jquants_bars_window_intersects_plan():
+    assert clamp_jquants_bars_window(
+        "2025-07-13", "2026-08-17", "2024-05-25", "2026-05-25"
+    ) == ("2025-07-13", "2026-05-25")
+    assert clamp_jquants_bars_window(
+        None, None, "2024-05-25", "2026-05-25"
+    ) == ("2024-05-25", "2026-05-25")
+
+
+def test_fetch_jquants_bars_clamps_window_on_400():
+    calls: list[str] = []
+
+    def fake_fetch(url: str) -> tuple[int, str, str]:
+        calls.append(url)
+        if "to=2026-08-17" in url:
+            return (
+                400,
+                "application/json",
+                json.dumps(
+                    {
+                        "message": (
+                            "Your subscription covers the following dates: "
+                            "2024-05-25 ~ 2026-05-25. If you want more data, "
+                            "please check other plans:https://jpx-jquants.com/#dataset"
+                        )
+                    }
+                ),
+            )
+        assert "to=2026-05-25" in url
+        assert "from=2025-07-13" in url
+        return (
+            200,
+            "application/json",
+            json.dumps({"data": [{"Date": "2026-05-25", "Code": "72030", "AdjC": 1.0}]}),
+        )
+
+    payload = fetch_jquants_bars_json(
+        "72030", from_="2025-07-13", to="2026-08-17", fetcher=fake_fetch
+    )
+    assert len(calls) == 2
+    assert payload["data"][0]["Date"] == "2026-05-25"
+
+
+def test_fetch_jquants_bars_drops_window_when_400_has_no_coverage():
+    calls: list[str] = []
+
+    def fake_fetch(url: str) -> tuple[int, str, str]:
+        calls.append(url)
+        if "from=" in url or "to=" in url:
+            return 400, "application/json", '{"message":"bad range"}'
+        return (
+            200,
+            "application/json",
+            json.dumps({"data": [{"Date": "2026-05-25", "Code": "72030", "AdjC": 1.0}]}),
+        )
+
+    payload = fetch_jquants_bars_json(
+        "72030", from_="2025-07-13", to="2026-08-17", fetcher=fake_fetch
+    )
+    assert "from=" not in calls[-1]
+    assert payload["data"][0]["AdjC"] == pytest.approx(1.0)
+
+
+def test_default_fetcher_returns_http_error_status(monkeypatch: pytest.MonkeyPatch):
+    import io
+    from email.message import Message
+    from urllib.error import HTTPError
+
+    monkeypatch.setattr("providers.http.JQUANTS_MIN_INTERVAL_SEC", 0)
+    monkeypatch.setattr("providers.http.JQUANTS_RATE_LIMIT_WAIT_SEC", 0)
+    headers = Message()
+    headers["Content-Type"] = "application/json"
+
+    def fake_urlopen(request, timeout=20):
+        raise HTTPError(
+            request.full_url,
+            400,
+            "Bad Request",
+            headers,
+            io.BytesIO(
+                b'{"message":"Your subscription covers the following dates: '
+                b'2024-05-25 ~ 2026-05-25."}'
+            ),
+        )
+
+    monkeypatch.setattr("providers.http.urlopen", fake_urlopen)
+    status, content_type, body = default_fetcher(
+        "https://api.jquants.com/v2/equities/bars/daily?code=72030"
+    )
+    assert status == 400
+    assert "application/json" in content_type
+    assert "2026-05-25" in body
 
 
 def test_fetch_jquants_bars_paginates(tmp_path: Path):

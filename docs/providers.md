@@ -36,7 +36,9 @@ J-Quants daily bars (jquants / auto prices):
   Light plan is not required. Free-plan bars omit the last ~12 weeks.
   That lag is accepted. Each name's `priceAsOf` is the last close used.
   When any name uses `jquants_bars`, `meta.json` sets `priceLagNote`.
-  Dates are not filled forward to today.
+  Dates are not filled forward to today. A `to` date past the plan window
+  is HTTP 400; the fetch clamps `from`/`to` to the covered range. Free
+  plan is 5 req/min; live calls wait between requests and retry HTTP 429.
 
 J-Quants FY fields (jquants source):
 

@@ -379,6 +379,7 @@ def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
         raw_dir=yahoo_dir,
         fundamentals_dir=fund_dir,
         jquants_dir=tmp_path / "no-jquants",
+        jquants_bars_dir=tmp_path / "no-bars",
         edinet_dir=tmp_path / "no-edinet",
         fundamentals_path=tmp_path / "empty.json",
     )
