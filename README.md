@@ -2,9 +2,9 @@
 
 Residual-income ranking. Python computes valuation; Next.js displays static JSON.
 
-**Current status:** Fixture MVP + Free Data Provider (Yahoo) + keyed J-Quants FY summaries + EDINET yuho XBRL.
+**Current status:** Fixture MVP + Free Data Provider (Yahoo) + keyed J-Quants FY summaries + EDINET yuho XBRL + `--source auto` fallback and a 10-name listed universe.
 
-Displayed data follows `public/data/meta.json`. The committed site is fixture data (fictional tickers). Free, J-Quants, and EDINET sources are opt-in and not used by CI.
+Displayed data follows `public/data/meta.json`. The committed site is fixture data (fictional tickers). Free, J-Quants, EDINET, and auto sources are opt-in and not used by CI. There is no GitHub Actions cron.
 
 ## Architecture
 
@@ -75,6 +75,21 @@ cached document lists; this repo does not crawl every filing date.
 python scripts/fetch_edinet_xbrl.py
 python scripts/build_public_data.py --source edinet
 ```
+
+## Auto source + operator refresh (optional, not CI)
+
+`--source auto` uses cached files only. Fundamentals per name: EDINET XBRL,
+then J-Quants FY summary, then Yahoo timeseries. Sources are not mixed inside
+one name. Extra universe names without cache stay ineligible.
+
+```bash
+python scripts/refresh_public_data.py --dry-run
+python scripts/refresh_public_data.py --source auto
+python scripts/build_public_data.py --source auto
+```
+
+`refresh_public_data.py` is an operator command. It is not scheduled CI.
+Do not commit the resulting live `public/data` JSON.
 
 ## Run frontend
 

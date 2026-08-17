@@ -157,6 +157,16 @@ def _apply_parsed_fundamentals(stock: dict[str, Any], fundamentals) -> bool:
     return fundamentals.book_value is not None or fundamentals.latest_roe is not None
 
 
+def _fundamentals_source_label(used: set[str], overlay: bool) -> str:
+    labels = []
+    for name in ("edinet_xbrl", "jquants_summary", "yahoo_timeseries"):
+        if name in used:
+            labels.append(name)
+    if overlay:
+        labels.append("manual_overlay")
+    return "+".join(labels) if labels else "missing"
+
+
 def _merge_overlay(base: dict[str, Any], overlay: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     """Fill only fields that are still missing. Do not overwrite provider values."""
     merged = dict(base)
@@ -454,6 +464,119 @@ def load_edinet_snapshot(
             "Prices from Yahoo Finance chart; fundamentals from EDINET annual "
             "XBRL (API key required to download). Missing values are not replaced "
             "with 0. Not investment advice."
+        ),
+        assumptions={
+            "riskFreeRate": float(universe["riskFreeRate"]),
+            "equityRiskPremium": float(universe["equityRiskPremium"]),
+            "retentionRatio": float(universe["retentionRatio"]),
+            "marketReturns": None,
+        },
+        stocks=stocks,
+    )
+
+
+def load_auto_snapshot(
+    *,
+    universe_path: Path = UNIVERSE_PATH,
+    fundamentals_path: Path = FUNDAMENTALS_PATH,
+    raw_dir: Path | None = None,
+    fundamentals_dir: Path | None = None,
+    jquants_dir: Path | None = None,
+    edinet_dir: Path | None = None,
+    range_: str | None = None,
+    fetcher=None,
+) -> DataSnapshot:
+    """
+    Prices from Yahoo chart JSON. Fundamentals per name, first usable source:
+
+    EDINET yuho XBRL → J-Quants FY summary → Yahoo annual timeseries → overlay.
+
+    Sources are not mixed inside one name. Missing stays missing. Cache only.
+    """
+    universe = load_universe(universe_path)
+    overlay_map = load_fundamentals(fundamentals_path)
+    market_symbol = str(universe["marketSymbol"])
+    lookback = range_ or str(universe.get("range", "1y"))
+    raw_dir = raw_dir or (ROOT / "data" / "raw" / "yahoo")
+    fundamentals_dir = fundamentals_dir or (ROOT / "data" / "raw" / "yahoo_fundamentals")
+    jquants_dir = jquants_dir or (ROOT / "data" / "raw" / "jquants")
+    edinet_dir = edinet_dir or (ROOT / "data" / "raw" / "edinet_xbrl")
+
+    def load_chart(symbol: str) -> dict[str, Any]:
+        if fetcher is not None:
+            return fetch_yahoo_chart_json(symbol, range_=lookback, fetcher=fetcher)
+        return _payload_from_raw(raw_dir, symbol)
+
+    market_series = parse_yahoo_chart(load_chart(market_symbol), expected_symbol=market_symbol)
+    stocks: list[dict[str, Any]] = []
+    as_of_dates: list[str] = []
+    used_sources: set[str] = set()
+    used_overlay = False
+
+    for item in universe["stocks"]:
+        ticker = str(item["ticker"])
+        yahoo_symbol = str(item["yahooSymbol"])
+        stock = _blank_stock(ticker, str(item["companyName"]))
+        _apply_yahoo_prices(
+            stock,
+            yahoo_symbol=yahoo_symbol,
+            load_chart=load_chart,
+            market_series=market_series,
+            as_of_dates=as_of_dates,
+        )
+        chosen: str | None = None
+        edinet_code = edinet_sec_code(item)
+        jq_code = jquants_code(item)
+        try:
+            if _apply_parsed_fundamentals(stock, parse_edinet_xbrl_dir(edinet_dir / edinet_code)):
+                chosen = "edinet_xbrl"
+        except ProviderError:
+            pass
+        if chosen is None:
+            try:
+                if _apply_parsed_fundamentals(
+                    stock,
+                    parse_jquants_summary(
+                        _payload_from_raw(jquants_dir, jq_code),
+                        expected_code=jq_code,
+                    ),
+                ):
+                    chosen = "jquants_summary"
+            except ProviderError:
+                pass
+        if chosen is None:
+            try:
+                if _apply_parsed_fundamentals(
+                    stock,
+                    parse_yahoo_fundamentals(_payload_from_raw(fundamentals_dir, yahoo_symbol)),
+                ):
+                    chosen = "yahoo_timeseries"
+            except ProviderError:
+                pass
+        if chosen is not None:
+            used_sources.add(chosen)
+        stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
+        if filled:
+            used_overlay = True
+        stocks.append(stock)
+
+    as_of = max(as_of_dates) if as_of_dates else None
+    return DataSnapshot(
+        source="auto",
+        source_label="Auto Data Provider",
+        price_source="yahoo_chart",
+        fundamentals_source=_fundamentals_source_label(used_sources, used_overlay),
+        market_symbol=market_symbol,
+        as_of_date=as_of,
+        disclaimer_ja=(
+            "価格は Yahoo Finance chart。財務は銘柄ごとに EDINET XBRL、"
+            "J-Quants、Yahoo timeseries の順で最初に揃ったソースです。"
+            "欠損は 0 にしません。投資助言ではありません。"
+        ),
+        disclaimer_en=(
+            "Prices from Yahoo Finance chart. Fundamentals use the first complete "
+            "source per name: EDINET XBRL, then J-Quants, then Yahoo timeseries. "
+            "Missing values are not replaced with 0. Not investment advice."
         ),
         assumptions={
             "riskFreeRate": float(universe["riskFreeRate"]),

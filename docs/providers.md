@@ -18,6 +18,7 @@ Provider snapshot
 | `free` | Yahoo Finance chart JSON | Yahoo annual timeseries | no | no |
 | `jquants` | Yahoo Finance chart JSON | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch | no |
 | `edinet` | Yahoo Finance chart JSON | EDINET yuho XBRL instance | `EDINET_API_KEY` to download zips | no |
+| `auto` | Yahoo Finance chart JSON | first usable source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
 
 Yahoo timeseries fields (free source):
 
@@ -74,9 +75,29 @@ python scripts/build_public_data.py --source jquants
 python scripts/fetch_edinet_list.py --date 2026-05-08
 python scripts/fetch_edinet_xbrl.py
 python scripts/build_public_data.py --source edinet
+
+# operator refresh (not CI, not a GitHub Actions cron)
+python scripts/refresh_public_data.py --dry-run
+python scripts/refresh_public_data.py --source auto
 ```
 
-Do not commit API keys. `.env*` is gitignored.
+`--source auto` is cache-only. Per name it takes the first usable fundamentals
+source and does not mix EDINET, J-Quants, and Yahoo inside one issuer. Names
+without a cached chart or financials stay ranking-ineligible; missing is not 0.
+
+`refresh_public_data.py` always runs the Yahoo fetch when not `--skip-fetch`.
+It runs J-Quants / EDINET XBRL fetches only when the matching env var is set.
+Fetch failures print a warning and continue; a failed build still fails the
+script. It does not crawl EDINET filing dates. Run
+`fetch_edinet_list.py --date YYYY-MM-DD` first if you need new yuho zips.
+
+The listed-name universe in `scripts/providers/universe.json` has 10 tickers.
+Recorded tests cover Toyota, Sony, and SoftBank. Extra names without cache
+remain ineligible until an operator fetches them.
+
+Do not commit API keys. `.env*` is gitignored. Do not commit live
+`public/data` from `--source auto` / `free` / `jquants` / `edinet`; CI rebuilds
+fixture JSON.
 
 Optional overlay: `scripts/providers/fundamentals.json`. Empty by default.
 Overlay fills only fields that are still missing.

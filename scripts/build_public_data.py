@@ -15,6 +15,7 @@ if str(SCRIPTS) not in sys.path:
 
 from models.pipeline import detail_row, evaluate_universe, ranking_row  # noqa: E402
 from providers.loader import (  # noqa: E402
+    load_auto_snapshot,
     load_edinet_snapshot,
     load_fixture_snapshot,
     load_free_snapshot,
@@ -35,7 +36,11 @@ def write_json(path: Path, payload: object) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", choices=("fixture", "free", "jquants", "edinet"), default="fixture")
+    parser.add_argument(
+        "--source",
+        choices=("fixture", "free", "jquants", "edinet", "auto"),
+        default="fixture",
+    )
     parser.add_argument("--raw-dir", default=str(ROOT / "data" / "raw" / "yahoo"))
     parser.add_argument(
         "--fundamentals-dir",
@@ -49,6 +54,9 @@ def main() -> int:
         help="free/jquants: download remote JSON (jquants live fetch needs JQUANTS_API_KEY)",
     )
     args = parser.parse_args()
+    if args.fetch and args.source not in {"free", "jquants"}:
+        print(f"FAIL --fetch is not supported for --source {args.source}", file=sys.stderr)
+        return 1
 
     if args.source == "fixture":
         snapshot = load_fixture_snapshot()
@@ -64,9 +72,16 @@ def main() -> int:
             jquants_dir=Path(args.jquants_dir),
             fetch=args.fetch,
         )
-    else:
+    elif args.source == "edinet":
         snapshot = load_edinet_snapshot(
             raw_dir=Path(args.raw_dir),
+            edinet_dir=Path(args.edinet_dir),
+        )
+    else:
+        snapshot = load_auto_snapshot(
+            raw_dir=Path(args.raw_dir),
+            fundamentals_dir=Path(args.fundamentals_dir),
+            jquants_dir=Path(args.jquants_dir),
             edinet_dir=Path(args.edinet_dir),
         )
 

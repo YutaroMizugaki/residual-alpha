@@ -6,37 +6,92 @@
   "riskFreeRate": 0.015,
   "equityRiskPremium": 0.05,
   "retentionRatio": 0.5,
-    "notes": [
-      "Yahoo symbols use .T for TSE. Market is Nikkei 225.",
-      "Stooq live HTTP is not used; it is bot-walled from automated clients.",
-      "Free source fundamentals: Yahoo annual timeseries.",
-      "J-Quants source fundamentals: v2 /fins/summary (API key for live fetch).",
-      "EDINET v2 list is supported for filing metadata; XBRL is not parsed."
-    ],
-    "stocks": [
-      {
-        "ticker": "7203",
-        "yahooSymbol": "7203.T",
-        "stooqSymbol": "7203.jp",
-        "jquantsCode": "72030",
-        "edinetSecCode": "72030",
-        "companyName": "Toyota Motor"
-      },
-      {
-        "ticker": "6758",
-        "yahooSymbol": "6758.T",
-        "stooqSymbol": "6758.jp",
-        "jquantsCode": "67580",
-        "edinetSecCode": "67580",
-        "companyName": "Sony Group"
-      },
-      {
-        "ticker": "9984",
-        "yahooSymbol": "9984.T",
-        "stooqSymbol": "9984.jp",
-        "jquantsCode": "99840",
-        "edinetSecCode": "99840",
-        "companyName": "SoftBank Group"
-      }
-    ]
+  "notes": [
+    "Yahoo symbols use .T for TSE. Market is Nikkei 225.",
+    "Stooq live HTTP is not used; it is bot-walled from automated clients.",
+    "Auto source fundamentals: EDINET XBRL, then J-Quants FY summary, then Yahoo timeseries.",
+    "Names without cached financials stay ranking-ineligible. Missing is not 0."
+  ],
+  "stocks": [
+    {
+      "ticker": "7203",
+      "yahooSymbol": "7203.T",
+      "stooqSymbol": "7203.jp",
+      "jquantsCode": "72030",
+      "edinetSecCode": "72030",
+      "companyName": "Toyota Motor"
+    },
+    {
+      "ticker": "6758",
+      "yahooSymbol": "6758.T",
+      "stooqSymbol": "6758.jp",
+      "jquantsCode": "67580",
+      "edinetSecCode": "67580",
+      "companyName": "Sony Group"
+    },
+    {
+      "ticker": "9984",
+      "yahooSymbol": "9984.T",
+      "stooqSymbol": "9984.jp",
+      "jquantsCode": "99840",
+      "edinetSecCode": "99840",
+      "companyName": "SoftBank Group"
+    },
+    {
+      "ticker": "6861",
+      "yahooSymbol": "6861.T",
+      "stooqSymbol": "6861.jp",
+      "jquantsCode": "68610",
+      "edinetSecCode": "68610",
+      "companyName": "Keyence"
+    },
+    {
+      "ticker": "6501",
+      "yahooSymbol": "6501.T",
+      "stooqSymbol": "6501.jp",
+      "jquantsCode": "65010",
+      "edinetSecCode": "65010",
+      "companyName": "Hitachi"
+    },
+    {
+      "ticker": "8035",
+      "yahooSymbol": "8035.T",
+      "stooqSymbol": "8035.jp",
+      "jquantsCode": "80350",
+      "edinetSecCode": "80350",
+      "companyName": "Tokyo Electron"
+    },
+    {
+      "ticker": "4063",
+      "yahooSymbol": "4063.T",
+      "stooqSymbol": "4063.jp",
+      "jquantsCode": "40630",
+      "edinetSecCode": "40630",
+      "companyName": "Shin-Etsu Chemical"
+    },
+    {
+      "ticker": "8306",
+      "yahooSymbol": "8306.T",
+      "stooqSymbol": "8306.jp",
+      "jquantsCode": "83060",
+      "edinetSecCode": "83060",
+      "companyName": "MUFG"
+    },
+    {
+      "ticker": "9432",
+      "yahooSymbol": "9432.T",
+      "stooqSymbol": "9432.jp",
+      "jquantsCode": "94320",
+      "edinetSecCode": "94320",
+      "companyName": "NTT"
+    },
+    {
+      "ticker": "6098",
+      "yahooSymbol": "6098.T",
+      "stooqSymbol": "6098.jp",
+      "jquantsCode": "60980",
+      "edinetSecCode": "60980",
+      "companyName": "Recruit Holdings"
+    }
+  ]
 }

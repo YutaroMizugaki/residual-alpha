@@ -19,9 +19,10 @@ Provider snapshot
 
 TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or scores.
 
-Default provider is **fixture** (fictional issuers). Optional **free** and
-**jquants** providers keep Yahoo prices. Optional **edinet** provider reads
-cached yuho XBRL for book value, profit, and shares. See `docs/providers.md`.
+Default provider is **fixture** (fictional issuers). Optional **free**,
+**jquants**, **edinet**, and **auto** providers keep Yahoo prices. **auto**
+picks fundamentals per name (EDINET XBRL, then J-Quants FY, then Yahoo
+timeseries). See `docs/providers.md`.
 
 ## What this phase does not include
 
@@ -43,10 +44,12 @@ No trading
 - `scripts/providers/` — fixture, Yahoo, J-Quants summary, EDINET list + XBRL
 - `scripts/fixtures/stocks.json` — fictional inputs
 - `scripts/build_public_data.py` — writes `public/data/`
+- `scripts/refresh_public_data.py` — optional operator fetch + rebuild (no cron)
 - `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
 - `scripts/fetch_jquants_data.py` — optional J-Quants FY summary download
 - `scripts/fetch_edinet_list.py` — optional EDINET document list
 - `scripts/fetch_edinet_xbrl.py` — optional EDINET yuho XBRL zip download
+- `scripts/providers/universe.json` — 10 listed names for non-fixture sources
 - `tests/` — pytest (no live network)
 - `app/`, `components/`, `lib/` — Next.js display only
 

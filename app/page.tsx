@@ -30,6 +30,12 @@ export default async function HomePage() {
           EDINET source can parse yuho XBRL (book, profit, shares) from cached
           zips; live download needs <code>EDINET_API_KEY</code>
         </li>
+        <li>
+          Auto source picks the first usable fundamentals cache per name
+          (EDINET, then J-Quants, then Yahoo). Operator refresh is
+          <code>scripts/refresh_public_data.py</code>; there is no scheduled
+          GitHub Actions cron
+        </li>
         <li>No database or backend API</li>
         {isFixture ? <li>Tickers 1001–1006 are fictional test companies</li> : null}
       </ul>
