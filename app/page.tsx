@@ -32,9 +32,10 @@ export default async function HomePage() {
           zips; live download needs <code>EDINET_API_KEY</code>
         </li>
         <li>
-          Auto source picks the first complete price series (J-Quants AdjC,
-          then Yahoo) and the first complete fundamentals cache per name
-          (EDINET, then J-Quants, then Yahoo). Operator refresh is
+          Auto source picks the complete price series with more aligned
+          returns (J-Quants AdjC vs Yahoo; J-Quants wins ties) and the first
+          complete fundamentals cache per name (EDINET, then J-Quants, then
+          Yahoo). Operator refresh is
           <code>scripts/refresh_public_data.py</code>; there is no scheduled
           GitHub Actions cron
         </li>

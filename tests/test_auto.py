@@ -324,7 +324,7 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         fundamentals_path=tmp_path / "empty.json",
     )
     assert snapshot.source == "auto"
-    assert snapshot.price_source == "jquants_bars+yahoo_chart"
+    assert snapshot.price_source == "yahoo_chart"
     assert [row["ticker"] for row in snapshot.stocks] == tickers
     extras = [row for row in snapshot.stocks if row["ticker"] not in CORE]
     assert len(extras) == 7
@@ -344,13 +344,10 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         assert by_ticker[ticker]["eligible"] is True
         assert by_ticker[ticker]["bookValue"] is not None
         assert by_ticker[ticker]["price"] is not None
-    for ticker in CORE:
-        assert by_ticker[ticker]["priceSource"] == "jquants_bars"
-        assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
-        assert by_ticker[ticker]["returnCount"] == 19
-    for ticker in EXTRAS:
         assert by_ticker[ticker]["priceSource"] == "yahoo_chart"
         assert by_ticker[ticker]["returnCount"] >= 199
+    for ticker in CORE:
+        assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)

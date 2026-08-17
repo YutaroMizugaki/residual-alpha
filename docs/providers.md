@@ -18,7 +18,7 @@ Provider snapshot
 | `free` | Yahoo Finance chart JSON | Yahoo annual timeseries | no | no |
 | `jquants` | J-Quants daily AdjC, else Yahoo chart | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch | no |
 | `edinet` | Yahoo Finance chart JSON | EDINET yuho XBRL instance | `EDINET_API_KEY` to download zips | no |
-| `auto` | first complete series per name: J-Quants daily AdjC → Yahoo chart | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
+| `auto` | complete series with more aligned returns: J-Quants daily AdjC vs Yahoo chart (J-Quants wins ties) | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
 
 Yahoo timeseries fields (free source):
 
@@ -89,13 +89,13 @@ python scripts/refresh_public_data.py --dry-run
 python scripts/refresh_public_data.py --source auto
 ```
 
-`--source auto` is cache-only. Per name it takes the first **complete**
-price series (J-Quants daily AdjC, then Yahoo chart) and the first
-**complete** fundamentals source (book, shares, and 3 beginning-book ROE
-years). It does not mix sources inside one issuer. A partial higher-tier
-cache does not block a complete lower-tier cache. If nothing is complete,
-the first partial is kept. Names without a cached chart or financials stay
-ranking-ineligible; missing is not 0.
+`--source auto` is cache-only. Per name it takes the **complete** price
+series with more aligned returns (J-Quants daily AdjC vs Yahoo chart;
+J-Quants wins ties) and the first **complete** fundamentals source (book,
+shares, and 3 beginning-book ROE years). It does not mix sources inside one
+issuer. A partial or short higher-tier cache does not block a longer complete
+lower-tier cache. If nothing is complete, the first partial is kept. Names
+without a cached chart or financials stay ranking-ineligible; missing is not 0.
 
 Each stock row carries its own `priceSource` and `fundamentalsSource` in
 both ranking JSON and stock detail JSON.
@@ -115,11 +115,11 @@ The listed-name universe in `scripts/providers/universe.json` has 10 tickers.
 Recorded Yahoo chart and annual timeseries cover all 10. Charts are ~1y of
 daily closes, inner-joined to Nikkei 225 (missing days dropped, not filled
 with 0). J-Quants summaries, daily bars, and EDINET XBRL still cover Toyota,
-Sony, and SoftBank. Recorded J-Quants bars are the recent window; `--source
-auto` prefers those complete bars over the longer Yahoo series for those
-three names. Names without a keyed cache fall through to Yahoo in
-`--source auto`, or stay ranking-ineligible on `--source jquants` /
-`--source edinet`. Missing is not 0.
+Sony, and SoftBank. Recorded J-Quants bars are the recent window. `--source
+auto` prefers the longer complete Yahoo series when bars are shorter;
+`--source jquants` still uses those bars first. Names without a keyed cache
+fall through to Yahoo in `--source auto`, or stay ranking-ineligible on
+`--source jquants` / `--source edinet`. Missing is not 0.
 
 Do not commit API keys. `.env*` is gitignored. Do not commit live
 `public/data` from `--source auto` / `free` / `jquants` / `edinet`; CI rebuilds

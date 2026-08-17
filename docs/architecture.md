@@ -20,8 +20,9 @@ Provider snapshot
 TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or scores.
 
 Default provider is **fixture** (fictional issuers). Optional **free**,
-**jquants**, **edinet**, and **auto** providers. **jquants** / **auto**
-prices prefer J-Quants daily AdjC, then Yahoo chart. Market stays Yahoo
+**jquants**, **edinet**, and **auto** providers. **jquants** prices prefer
+J-Quants daily AdjC, then Yahoo chart. **auto** prices pick the complete
+series with more aligned returns (J-Quants wins ties). Market stays Yahoo
 Nikkei 225. **auto** picks the first complete fundamentals source per name
 (EDINET XBRL, then J-Quants FY, then Yahoo timeseries). See
 `docs/providers.md`.

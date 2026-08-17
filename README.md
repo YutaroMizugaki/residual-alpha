@@ -78,8 +78,9 @@ python scripts/build_public_data.py --source edinet
 
 ## Auto source + operator refresh (optional, not CI)
 
-`--source auto` uses cached files only. Prices per name: J-Quants daily AdjC,
-then Yahoo chart. Fundamentals per name: first complete source among EDINET
+`--source auto` uses cached files only. Prices per name: the complete series
+with more aligned returns (J-Quants daily AdjC vs Yahoo chart; J-Quants wins
+ties). Fundamentals per name: first complete source among EDINET
 XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
 inside one name. Recorded Yahoo charts cover ~1y of daily closes aligned to
 Nikkei 225 for all 10 universe names.

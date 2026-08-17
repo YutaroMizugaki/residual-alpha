@@ -253,11 +253,14 @@ def test_auto_mixed_price_sources_across_names(tmp_path: Path):
             ],
         },
     )
+    yahoo_dir = tmp_path / "yahoo"
+    _write_json(yahoo_dir / "_N225.json", json.loads((YAHOO_DIR / "_N225.json").read_text()))
+    _write_json(yahoo_dir / "6758.T.json", json.loads((YAHOO_DIR / "6758.T.json").read_text()))
     bars_dir = tmp_path / "bars"
     _write_json(bars_dir / "72030.json", json.loads((BARS_DIR / "72030.json").read_text()))
     snapshot = load_auto_snapshot(
         universe_path=universe,
-        raw_dir=YAHOO_DIR,
+        raw_dir=yahoo_dir,
         fundamentals_dir=FUND_DIR,
         jquants_dir=JQUANTS_DIR,
         jquants_bars_dir=bars_dir,
@@ -270,3 +273,41 @@ def test_auto_mixed_price_sources_across_names(tmp_path: Path):
     assert by_ticker["7203"]["priceSource"] == "jquants_bars"
     assert by_ticker["6758"]["price"] == pytest.approx(3780.0)
     assert by_ticker["6758"]["priceSource"] == "yahoo_chart"
+
+
+def test_auto_prefers_longer_yahoo_over_short_bars(tmp_path: Path):
+    snapshot = load_auto_snapshot(
+        universe_path=_mini_universe(tmp_path / "universe.json"),
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=FUND_DIR,
+        jquants_dir=JQUANTS_DIR,
+        jquants_bars_dir=BARS_DIR,
+        edinet_dir=XBRL_DIR,
+        fundamentals_path=tmp_path / "empty.json",
+    )
+    toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
+    assert toyota["priceSource"] == "yahoo_chart"
+    assert toyota["price"] == pytest.approx(3013.0)
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
+    ranked = next(row for row in computed if row["ticker"] == "7203")
+    assert ranked["returnCount"] >= 199
+    assert ranked["priceSource"] == "yahoo_chart"
+
+
+def test_jquants_source_keeps_short_bars_when_yahoo_is_longer(tmp_path: Path):
+    snapshot = load_jquants_snapshot(
+        universe_path=_mini_universe(tmp_path / "universe.json"),
+        raw_dir=YAHOO_DIR,
+        jquants_dir=JQUANTS_DIR,
+        jquants_bars_dir=BARS_DIR,
+        fetch=False,
+        fundamentals_path=tmp_path / "empty.json",
+    )
+    toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
+    assert snapshot.price_source == "jquants_bars"
+    assert toyota["priceSource"] == "jquants_bars"
+    assert toyota["price"] == pytest.approx(3013.0)
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
+    ranked = next(row for row in computed if row["ticker"] == "7203")
+    assert ranked["returnCount"] == 19
+    assert ranked["priceSource"] == "jquants_bars"

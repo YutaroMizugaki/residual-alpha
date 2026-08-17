@@ -156,11 +156,11 @@ def _apply_price_series(
         stock["marketReturns"] = market_returns
 
 
-def _price_complete(series, market_series) -> bool:
-    if series.last() is None:
-        return False
+def _aligned_return_count(series, market_series) -> int:
     stock_returns, market_returns = aligned_simple_returns(series, market_series)
-    return len(stock_returns) >= 2 and len(market_returns) >= 2
+    if len(stock_returns) != len(market_returns):
+        return 0
+    return len(stock_returns)
 
 
 def _apply_yahoo_prices(
@@ -194,21 +194,34 @@ def _apply_price_waterfall(
     market_series,
     as_of_dates: list[str],
     used_price_sources: set[str],
+    prefer_longer: bool = False,
 ) -> None:
-    """J-Quants AdjC bars first, then Yahoo chart. Do not mix series inside one name."""
+    """J-Quants AdjC bars first, then Yahoo chart. Do not mix series inside one name.
+
+    Complete means a last close and at least two aligned market returns.
+    `--source jquants` keeps the first complete series (bars, then Yahoo).
+    `--source auto` keeps the complete series with more aligned returns;
+    equal length keeps J-Quants. A short complete higher-tier cache does not
+    block a longer complete lower-tier cache.
+    """
     chosen_label: str | None = None
     chosen_series = None
+    chosen_n = -1
     fallback_label: str | None = None
     fallback_series = None
 
     def take(label: str, series) -> None:
-        nonlocal chosen_label, chosen_series, fallback_label, fallback_series
-        if chosen_series is not None:
+        nonlocal chosen_label, chosen_series, chosen_n, fallback_label, fallback_series
+        if series.last() is None:
             return
-        if _price_complete(series, market_series):
-            chosen_label = label
-            chosen_series = series
-        elif fallback_series is None and series.last() is not None:
+        count = _aligned_return_count(series, market_series)
+        if count >= 2:
+            if chosen_series is None or (prefer_longer and count > chosen_n):
+                chosen_label = label
+                chosen_series = series
+                chosen_n = count
+            return
+        if fallback_series is None:
             fallback_label = label
             fallback_series = series
 
@@ -216,7 +229,7 @@ def _apply_price_waterfall(
         take("jquants_bars", parse_jquants_bars(load_bars(jq_code), expected_code=jq_code))
     except ProviderError:
         pass
-    if chosen_series is None:
+    if prefer_longer or chosen_series is None:
         try:
             take(
                 "yahoo_chart",
@@ -651,16 +664,17 @@ def load_auto_snapshot(
     fetcher=None,
 ) -> DataSnapshot:
     """
-    Prices per name, first complete series: J-Quants daily AdjC → Yahoo chart.
-    Market is Yahoo Nikkei 225. Fundamentals per name, first complete source:
+    Prices per name: the complete series with more aligned returns among
+    J-Quants daily AdjC and Yahoo chart (J-Quants wins ties). Market is Yahoo
+    Nikkei 225. Fundamentals per name, first complete source:
 
     EDINET yuho XBRL → J-Quants FY summary → Yahoo annual timeseries → overlay.
 
     Complete prices means a last close and at least two aligned market returns.
     Complete fundamentals means book, shares, and 3 beginning-book ROE years.
-    A partial higher-tier cache does not block a complete lower-tier cache.
-    Sources are not mixed inside one name. If nothing is complete, the first
-    partial is kept. Missing stays missing. Cache only.
+    A partial or short higher-tier cache does not block a longer complete
+    lower-tier cache. Sources are not mixed inside one name. If nothing is
+    complete, the first partial is kept. Missing stays missing. Cache only.
     """
     universe = load_universe(universe_path)
     overlay_map = load_fundamentals(fundamentals_path)
@@ -701,6 +715,7 @@ def load_auto_snapshot(
             market_series=market_series,
             as_of_dates=as_of_dates,
             used_price_sources=used_price_sources,
+            prefer_longer=True,
         )
         chosen_label: str | None = None
         chosen_fundamentals = None
@@ -767,16 +782,17 @@ def load_auto_snapshot(
         market_symbol=market_symbol,
         as_of_date=as_of,
         disclaimer_ja=(
-            "価格は銘柄ごとに J-Quants 日足 AdjC、なければ Yahoo chart。"
+            "価格は銘柄ごとに揃った系列のうち、リターン本数が多い方"
+            "（同数なら J-Quants 日足 AdjC、それ以外は Yahoo chart）。"
             "市場は Yahoo 日経平均。財務は EDINET XBRL、J-Quants、Yahoo timeseries "
             "の順で最初に揃ったソースです。欠損は 0 にしません。投資助言ではありません。"
         ),
         disclaimer_en=(
-            "Prices use the first complete series per name: J-Quants daily AdjC, "
-            "then Yahoo chart. Market is Yahoo Nikkei 225. Fundamentals use the "
-            "first complete source per name: EDINET XBRL, then J-Quants, then "
-            "Yahoo timeseries. Missing values are not replaced with 0. "
-            "Not investment advice."
+            "Prices use the complete series with more aligned returns per name "
+            "(J-Quants daily AdjC if tied, otherwise Yahoo chart). Market is "
+            "Yahoo Nikkei 225. Fundamentals use the first complete source per "
+            "name: EDINET XBRL, then J-Quants, then Yahoo timeseries. Missing "
+            "values are not replaced with 0. Not investment advice."
         ),
         assumptions={
             "riskFreeRate": float(universe["riskFreeRate"]),
