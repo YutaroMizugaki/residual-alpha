@@ -45,6 +45,9 @@ J-Quants FY fields (jquants source):
 - `ShEq` (else `Eq`) → book value (JPY → million JPY)
 - `NP` → net income
 - `ShOutFY − TrShFY` → shares (both must be present; empty treasury is not 0)
+- Free-plan `/fins/summary` currently returns about two annual FY rows
+  per name (one beginning-book ROE). That is not padded to three years.
+  Recorded 7203 / 6758 / 9984 keep four FY years for parser tests.
 
 EDINET XBRL (edinet source), from the PublicDoc instance in a type=1 zip:
 
@@ -94,8 +97,10 @@ python scripts/build_public_data.py --source jquants
 # (not CI; does not write public/data; empty/non-positive AdjC dropped, not filled with 0)
 python scripts/compact_jquants_caches.py \
   --src-summaries data/raw/jquants --src-bars data/raw/jquants_bars \
-  --dst-summaries tests/data/jquants --dst-bars tests/data/jquants_bars
+  --dst-summaries tests/data/jquants --dst-bars tests/data/jquants_bars \
+  --keep-existing
 # --existing-only skips names with no cache; it does not invent missing names
+# --keep-existing leaves recorded 7203/6758/9984 fixtures in place
 
 # EDINET list then yuho XBRL zips (network; needs EDINET_API_KEY; not run in CI)
 python scripts/fetch_edinet_list.py --date 2026-05-08
@@ -138,12 +143,17 @@ Recorded Yahoo chart and annual timeseries cover all 10. Charts are ~1y of
 daily closes, inner-joined to Nikkei 225 (missing days dropped, not filled
 with 0). `scripts/compact_yahoo_charts.py --align` writes that compact form
 from a live Yahoo chart dump; it does not fetch and does not write
-`public/data`. J-Quants summaries, daily bars, and EDINET XBRL still cover Toyota,
-Sony, and SoftBank. `scripts/compact_jquants_caches.py` writes FY rows and
+`public/data`. Recorded J-Quants FY + AdjC cover all 10 names.
+7203 / 6758 / 9984 keep four FY years and short Yahoo-aligned bars for
+parser tests. The other seven are free-plan dumps: about two FY years
+(one beginning-book ROE, not padded) and daily AdjC through the plan
+window (`priceAsOf` 2026-05-25). EDINET XBRL still covers Toyota, Sony,
+and SoftBank. `scripts/compact_jquants_caches.py` writes FY rows and
 AdjC-only bars from a live dump; `--existing-only` skips names with no cache
-instead of failing. It does not fetch, does not invent missing names, and
-does not write `public/data`. Recorded J-Quants bars are the recent window. `--source
-auto` prefers the longer complete Yahoo series when bars are shorter;
+instead of failing; `--keep-existing` does not overwrite destination files
+that already exist. It does not fetch, does not invent missing names, and
+does not write `public/data`. `--source auto` prefers the longer complete
+Yahoo series when free-plan bars are shorter or FY history is incomplete;
 `--source jquants` still uses those bars first. Names without a keyed cache
 fall through to Yahoo in `--source auto`, or stay ranking-ineligible on
 `--source jquants` / `--source edinet`. Missing is not 0.

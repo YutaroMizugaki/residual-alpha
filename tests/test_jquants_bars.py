@@ -475,6 +475,46 @@ def test_compact_jquants_bars_keeps_recorded_last_close():
     assert "C" not in compact["data"][0]
 
 
+def test_recorded_extra_jquants_bars_use_free_plan_window():
+    extras = ["68610", "65010", "80350", "40630", "83060", "94320", "60980"]
+    for code in extras:
+        payload = json.loads((BARS_DIR / f"{code}.json").read_text(encoding="utf-8"))
+        series = parse_jquants_bars(payload, expected_code=code)
+        last = series.last()
+        assert last is not None
+        assert last[0].isoformat() == "2026-05-25"
+        assert last[1] > 0
+        assert 0 not in [point[1] for point in series.points]
+        assert len(series.points) == 208
+        assert set(payload["data"][0]) == {"Date", "Code", "AdjC"}
+
+
+def test_jquants_source_uses_extra_bars_without_filling_forward(tmp_path: Path):
+    snapshot = load_jquants_snapshot(
+        raw_dir=YAHOO_DIR,
+        jquants_dir=JQUANTS_DIR,
+        jquants_bars_dir=BARS_DIR,
+        fetch=False,
+        fundamentals_path=tmp_path / "empty.json",
+    )
+    keyence = next(row for row in snapshot.stocks if row["ticker"] == "6861")
+    assert keyence["priceSource"] == "jquants_bars"
+    assert keyence["price"] == pytest.approx(78860.0)
+    assert keyence["priceAsOf"] == "2026-05-25"
+    assert keyence["price"] != pytest.approx(86750.0)
+    toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
+    assert toyota["price"] == pytest.approx(3013.0)
+    assert toyota["priceAsOf"] == "2026-08-17"
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
+    by_ticker = {row["ticker"]: row for row in computed}
+    assert by_ticker["6861"]["eligible"] is False
+    assert by_ticker["6861"]["roeCount"] == 1
+    assert "insufficient_roe_history" in by_ticker["6861"]["exclusionReasons"]
+    assert by_ticker["7203"]["eligible"] is True
+    meta = snapshot.meta()
+    assert meta["priceLagNote"] == JQUANTS_FREE_LAG_NOTE
+
+
 def test_compact_jquants_bars_zero_only_is_missing():
     payload = json.loads((BARS_DIR / "zero_adjc.json").read_text(encoding="utf-8"))
     with pytest.raises(FetchError):
@@ -608,3 +648,85 @@ def test_compact_jquants_dir_universe_only(tmp_path: Path):
         existing_only=True,
     )
     assert empty_only == 1
+    poison_summary = {
+        "data": [
+            {
+                "DiscDate": "2020-05-01",
+                "DiscNo": "poison",
+                "Code": "72030",
+                "DocType": "FYFinancialStatements_Consolidated_IFRS",
+                "CurPerType": "FY",
+                "CurPerEn": "2020-03-31",
+                "NP": "1",
+                "Eq": "1",
+                "ShEq": "1",
+                "ShOutFY": "1",
+                "TrShFY": "0",
+            }
+        ]
+    }
+    poison_bars = {"data": [{"Date": "2020-01-05", "Code": "72030", "AdjC": 1.0}]}
+    (summaries_src / "72030.json").write_text(json.dumps(poison_summary), encoding="utf-8")
+    (bars_src / "72030.json").write_text(json.dumps(poison_bars), encoding="utf-8")
+    (summaries_src / "68610.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "DiscDate": "2026-05-08",
+                        "DiscNo": "1",
+                        "Code": "68610",
+                        "DocType": "FYFinancialStatements_Consolidated_IFRS",
+                        "CurPerType": "FY",
+                        "CurPerEn": "2026-03-20",
+                        "NP": "100",
+                        "Eq": "1000",
+                        "ShEq": "1000",
+                        "ShOutFY": "100",
+                        "TrShFY": "0",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bars_src / "68610.json").write_text(
+        json.dumps({"data": [{"Date": "2026-05-25", "Code": "68610", "AdjC": 10.0}]}),
+        encoding="utf-8",
+    )
+    keep_dst_s = tmp_path / "keep_summaries"
+    keep_dst_b = tmp_path / "keep_bars"
+    keep_dst_s.mkdir()
+    keep_dst_b.mkdir()
+    (keep_dst_s / "72030.json").write_text(
+        (summaries_dst / "72030.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (keep_dst_b / "72030.json").write_text(
+        (bars_dst / "72030.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    assert (
+        compact_jquants_dir(
+            summaries_src,
+            bars_src,
+            keep_dst_s,
+            keep_dst_b,
+            universe=extra,
+            keep_existing=True,
+        )
+        == 0
+    )
+    kept = json.loads((keep_dst_s / "72030.json").read_text(encoding="utf-8"))
+    assert kept["data"][0]["NP"] == "100"
+    added = json.loads((keep_dst_s / "68610.json").read_text(encoding="utf-8"))
+    assert added["data"][0]["Code"] == "68610"
+    already = compact_jquants_dir(
+        summaries_src,
+        bars_src,
+        keep_dst_s,
+        keep_dst_b,
+        universe=extra,
+        keep_existing=True,
+    )
+    assert already == 0

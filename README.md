@@ -75,16 +75,23 @@ python scripts/build_public_data.py --source jquants
 
 Prices prefer cached J-Quants daily AdjC, then Yahoo chart. Market stays
 Yahoo Nikkei 225. Fundamentals come from J-Quants FY summary rows.
+Free-plan summaries currently return about two annual FY years (one
+beginning-book ROE). That is not padded to three years, so `--source
+jquants` stays ranking-ineligible until a complete lower-tier source
+(Yahoo / EDINET) is used via `--source auto`.
 
 After a live fetch, compact universe caches before copying into
 `tests/data/jquants` and `tests/data/jquants_bars`. Empty AdjC and
 non-positive AdjC are dropped, not filled with `0`. Files such as
-`empty_adjc.json` stay out of the write set.
+`empty_adjc.json` stay out of the write set. `--keep-existing` leaves
+the recorded 7203 / 6758 / 9984 fixtures (4 FY years and short
+Yahoo-aligned bars) in place.
 
 ```bash
 python scripts/compact_jquants_caches.py \
   --src-summaries data/raw/jquants --src-bars data/raw/jquants_bars \
-  --dst-summaries tests/data/jquants --dst-bars tests/data/jquants_bars
+  --dst-summaries tests/data/jquants --dst-bars tests/data/jquants_bars \
+  --keep-existing
 ```
 
 `--existing-only` skips universe names that have no cache. It does not
@@ -113,7 +120,10 @@ with more aligned returns (J-Quants daily AdjC vs Yahoo chart; J-Quants wins
 ties). Fundamentals per name: first complete source among EDINET
 XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
 inside one name. Recorded Yahoo charts cover ~1y of daily closes aligned to
-Nikkei 225 for all 10 universe names.
+Nikkei 225 for all 10 universe names. Recorded J-Quants FY + AdjC also cover
+all 10; free-plan extras have ~2 FY years so auto still uses Yahoo
+timeseries there, and shorter/lagged bars so auto still uses the longer
+Yahoo chart.
 Stock detail JSON includes per-name `priceSource` and `fundamentalsSource`.
 Ranking JSON includes the same per-name labels plus `returnCount` (aligned
 daily returns used for beta), `roeCount` (ROE history years used for

@@ -45,12 +45,20 @@ def compact_jquants_dir(
     universe: dict,
     dry_run: bool = False,
     existing_only: bool = False,
+    keep_existing: bool = False,
 ) -> int:
     """Compact universe J-Quants caches only. Does not touch public/data or live fetch."""
     pending: list[tuple[str, dict, dict]] = []
     failed = 0
+    skipped_existing = 0
     for code in universe_codes(universe):
         name = cache_filename(code)
+        summary_out = summaries_dst / name
+        bars_out = bars_dst / name
+        if keep_existing and summary_out.exists() and bars_out.exists():
+            print(f"SKIP existing {name}")
+            skipped_existing += 1
+            continue
         summary_path = summaries_src / name
         bars_path = bars_src / name
         if not summary_path.exists() or not bars_path.exists():
@@ -74,6 +82,9 @@ def compact_jquants_dir(
     if failed:
         return 1
     if not pending:
+        if skipped_existing:
+            print("OK destination caches already exist")
+            return 0
         print("FAIL no universe J-Quants caches to compact")
         return 1
     for name, summary, bars in pending:
@@ -119,6 +130,14 @@ def main() -> int:
         action="store_true",
         help="Skip universe names with no cache instead of failing. Does not invent missing names.",
     )
+    parser.add_argument(
+        "--keep-existing",
+        action="store_true",
+        help=(
+            "Do not overwrite destination files that already exist. "
+            "Keeps recorded 7203/6758/9984 fixtures when adding other universe names."
+        ),
+    )
     args = parser.parse_args()
     try:
         universe = load_universe(Path(args.universe))
@@ -137,6 +156,7 @@ def main() -> int:
         universe=universe,
         dry_run=args.dry_run,
         existing_only=args.existing_only,
+        keep_existing=args.keep_existing,
     )
 
 
