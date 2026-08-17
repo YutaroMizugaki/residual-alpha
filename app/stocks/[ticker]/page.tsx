@@ -5,6 +5,7 @@ import { MetricCard } from "@/components/metric-card";
 import { ScoreBreakdown } from "@/components/score-breakdown";
 import { SourceKicker } from "@/components/source-kicker";
 import { loadMeta, loadRankings, loadStock } from "@/lib/data";
+import { JQUANTS_FREE_LAG_NOTE } from "@/lib/meta-types";
 import {
   formatBeta,
   formatNumber,
@@ -61,8 +62,11 @@ export default async function StockPage({ params }: PageProps) {
       </h1>
       <p className="mt-1 text-sm text-slate-600">
         Price source {stock.priceSource ?? "missing"}
-        {stock.priceAsOf ? ` as of ${stock.priceAsOf}` : ""}. Fundamentals
-        source {stock.fundamentalsSource ?? "missing"}
+        {stock.priceAsOf ? ` as of ${stock.priceAsOf}` : ""}.
+        {stock.priceSource === "jquants_bars"
+          ? ` ${meta.priceLagNote ?? JQUANTS_FREE_LAG_NOTE}`
+          : ""}{" "}
+        Fundamentals source {stock.fundamentalsSource ?? "missing"}
         {stock.fundamentalsAsOf ? ` (FY ${stock.fundamentalsAsOf})` : ""}.
         Book value is million JPY; shares are million shares; displayed price
         is JPY per share.

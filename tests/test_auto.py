@@ -326,8 +326,8 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         edinet_dir=XBRL_DIR,
         fundamentals_path=tmp_path / "empty.json",
     )
-    assert snapshot.source == "auto"
     assert snapshot.price_source == "yahoo_chart"
+    assert snapshot.meta()["priceLagNote"] is None
     assert [row["ticker"] for row in snapshot.stocks] == tickers
     extras = [row for row in snapshot.stocks if row["ticker"] not in CORE]
     assert len(extras) == 7

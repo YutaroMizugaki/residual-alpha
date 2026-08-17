@@ -16,7 +16,7 @@ Provider snapshot
 | --- | --- | --- | --- | --- |
 | `fixture` | fictional JSON | fictional JSON | no | yes (CI) |
 | `free` | Yahoo Finance chart JSON | Yahoo annual timeseries | no | no |
-| `jquants` | J-Quants daily AdjC, else Yahoo chart | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch | no |
+| `jquants` | J-Quants daily AdjC, else Yahoo chart | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch (free plan is enough) | no |
 | `edinet` | Yahoo Finance chart JSON | EDINET yuho XBRL instance | `EDINET_API_KEY` to download zips | no |
 | `auto` | complete series with more aligned returns: J-Quants daily AdjC vs Yahoo chart (J-Quants wins ties) | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
 
@@ -32,6 +32,11 @@ J-Quants daily bars (jquants / auto prices):
 - Empty / null `AdjC` is missing, not 0. Unadjusted `C` is not used.
 - No-trade days stay missing. Market for beta remains Yahoo Nikkei 225;
   J-Quants does not publish Nikkei OHLC.
+- Live fetch needs `JQUANTS_API_KEY`. The **free plan is enough**; a paid
+  Light plan is not required. Free-plan bars omit the last ~12 weeks.
+  That lag is accepted. Each name's `priceAsOf` is the last close used.
+  When any name uses `jquants_bars`, `meta.json` sets `priceLagNote`.
+  Dates are not filled forward to today.
 
 J-Quants FY fields (jquants source):
 

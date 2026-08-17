@@ -5,6 +5,8 @@
   "fundamentalsSource": "fixture",
   "marketSymbol": null,
   "asOfDate": null,
+  "priceLagNote": null,
+  "priceLagNoteJa": null,
   "disclaimerJa": "現在表示している銘柄および数値はテスト用fixtureです。",
   "disclaimerEn": "Test data only. Tickers and figures are fictional, not live market prices."
 }

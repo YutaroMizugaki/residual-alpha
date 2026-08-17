@@ -23,9 +23,11 @@ export default async function HomePage() {
           key, no yfinance package)
         </li>
         <li>
-          J-Quants source can load daily AdjC bars and FY summary rows when
-          <code>JQUANTS_API_KEY</code> is set for a live fetch. Market stays
-          Yahoo Nikkei 225.
+          J-Quants can load daily AdjC bars and FY summary rows when
+          <code>JQUANTS_API_KEY</code> is set for a live fetch. The free plan
+          is enough; a paid Light plan is not required. Free-plan bars can lag
+          about 12 weeks — each name shows <code>priceAsOf</code>, the last
+          close actually used. Market stays Yahoo Nikkei 225.
         </li>
         <li>
           EDINET source can parse yuho XBRL (book, profit, shares) from cached

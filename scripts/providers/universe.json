@@ -10,6 +10,7 @@
     "Yahoo symbols use .T for TSE. Market is Nikkei 225.",
     "Stooq live HTTP is not used; it is bot-walled from automated clients.",
     "Auto source prices: complete series with more aligned returns (J-Quants AdjC vs Yahoo; J-Quants wins ties). Market is Nikkei 225.",
+    "J-Quants free-plan daily bars can lag about 12 weeks. That is accepted; priceAsOf is the last close used. A paid Light plan is not required.",
     "Auto source fundamentals: EDINET XBRL, then J-Quants FY summary, then Yahoo timeseries.",
     "Names without cached financials stay ranking-ineligible. Missing is not 0.",
     "Recorded Yahoo chart/timeseries cover all 10 names (~1y daily closes aligned to Nikkei 225). J-Quants and EDINET caches cover 7203, 6758, 9984."

@@ -157,6 +157,8 @@ def test_public_json_matches_engine_and_schema():
     meta = json.loads((ROOT / "public" / "data" / "meta.json").read_text(encoding="utf-8"))
     assert meta["source"] == "fixture"
     assert meta["sourceLabel"] == "Fixture Data"
+    assert meta["priceLagNote"] is None
+    assert meta["priceLagNoteJa"] is None
 
 
 def test_evaluate_stock_passes_per_name_sources():

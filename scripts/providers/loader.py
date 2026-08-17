@@ -29,6 +29,22 @@ FIXTURE_PATH = ROOT / "scripts" / "fixtures" / "stocks.json"
 UNIVERSE_PATH = ROOT / "scripts" / "providers" / "universe.json"
 FUNDAMENTALS_PATH = ROOT / "scripts" / "providers" / "fundamentals.json"
 
+# Free-plan J-Quants daily bars omit the last ~12 weeks. Light is not required.
+JQUANTS_FREE_LAG_NOTE = (
+    "J-Quants free-plan daily bars can lag about 12 weeks. "
+    "Each name's priceAsOf is the last close used; dates are not filled forward."
+)
+JQUANTS_FREE_LAG_NOTE_JA = (
+    "J-Quants無料プランの日次足は約12週遅れです。"
+    "各銘柄のpriceAsOfが使った最終終値日です。先埋めしません。"
+)
+
+
+def jquants_price_lag_notes(price_source: str) -> tuple[str | None, str | None]:
+    if "jquants_bars" in (price_source or ""):
+        return JQUANTS_FREE_LAG_NOTE, JQUANTS_FREE_LAG_NOTE_JA
+    return None, None
+
 
 @dataclass(frozen=True)
 class DataSnapshot:
@@ -44,6 +60,7 @@ class DataSnapshot:
     stocks: list[dict[str, Any]]
 
     def meta(self) -> dict[str, Any]:
+        lag_en, lag_ja = jquants_price_lag_notes(self.price_source)
         return {
             "source": self.source,
             "sourceLabel": self.source_label,
@@ -51,6 +68,8 @@ class DataSnapshot:
             "fundamentalsSource": self.fundamentals_source,
             "marketSymbol": self.market_symbol,
             "asOfDate": self.as_of_date,
+            "priceLagNote": lag_en,
+            "priceLagNoteJa": lag_ja,
             "disclaimerJa": self.disclaimer_ja,
             "disclaimerEn": self.disclaimer_en,
         }
@@ -532,14 +551,16 @@ def load_jquants_snapshot(
         as_of_date=as_of,
         disclaimer_ja=(
             "価格は J-Quants 日足 AdjC（なければ Yahoo chart）。"
-            "市場は Yahoo 日経平均。財務は J-Quants 決算短信サマリー（キー必須）です。"
+            "市場は Yahoo 日経平均。財務は J-Quants 決算短信サマリーです。"
+            "無料プランで足り、有料ライトは不要です。無料の日次足は約12週遅れです。"
             "欠損は 0 にしません。投資助言ではありません。"
         ),
         disclaimer_en=(
             "Prices from J-Quants daily AdjC (Yahoo chart if bars are missing). "
-            "Market is Yahoo Nikkei 225. Fundamentals from J-Quants FY summary "
-            "(API key required for live fetch). Missing values are not replaced "
-            "with 0. Not investment advice."
+            "Market is Yahoo Nikkei 225. Fundamentals from J-Quants FY summary. "
+            "The free plan is enough; a paid Light plan is not required. "
+            "Free-plan daily bars can lag about 12 weeks. Missing values are "
+            "not replaced with 0. Not investment advice."
         ),
         assumptions={
             "riskFreeRate": float(universe["riskFreeRate"]),
@@ -785,14 +806,18 @@ def load_auto_snapshot(
             "価格は銘柄ごとに揃った系列のうち、リターン本数が多い方"
             "（同数なら J-Quants 日足 AdjC、それ以外は Yahoo chart）。"
             "市場は Yahoo 日経平均。財務は EDINET XBRL、J-Quants、Yahoo timeseries "
-            "の順で最初に揃ったソースです。欠損は 0 にしません。投資助言ではありません。"
+            "の順で最初に揃ったソースです。"
+            "J-Quants 無料プランで足り、有料ライトは不要です。無料の日次足は約12週遅れです。"
+            "欠損は 0 にしません。投資助言ではありません。"
         ),
         disclaimer_en=(
             "Prices use the complete series with more aligned returns per name "
             "(J-Quants daily AdjC if tied, otherwise Yahoo chart). Market is "
             "Yahoo Nikkei 225. Fundamentals use the first complete source per "
-            "name: EDINET XBRL, then J-Quants, then Yahoo timeseries. Missing "
-            "values are not replaced with 0. Not investment advice."
+            "name: EDINET XBRL, then J-Quants, then Yahoo timeseries. "
+            "The J-Quants free plan is enough; a paid Light plan is not required. "
+            "Free-plan daily bars can lag about 12 weeks. Missing values are "
+            "not replaced with 0. Not investment advice."
         ),
         assumptions={
             "riskFreeRate": float(universe["riskFreeRate"]),

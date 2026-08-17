@@ -51,7 +51,10 @@ Missing values are not replaced with 0. Not investment advice.
 
 ## J-Quants (optional, not CI)
 
-Needs `JQUANTS_API_KEY` for live download. Do not commit the key.
+Needs `JQUANTS_API_KEY` for live download. Do not commit the key. The
+**free plan is enough**; a paid Light plan is not required. Free-plan
+daily bars can lag about 12 weeks. That is accepted: each name shows
+`priceAsOf` (the last close actually used). Dates are not filled forward.
 
 ```bash
 python scripts/fetch_jquants_data.py

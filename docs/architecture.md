@@ -21,7 +21,9 @@ TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or s
 
 Default provider is **fixture** (fictional issuers). Optional **free**,
 **jquants**, **edinet**, and **auto** providers. **jquants** prices prefer
-J-Quants daily AdjC, then Yahoo chart. **auto** prices pick the complete
+J-Quants daily AdjC, then Yahoo chart. The J-Quants **free plan is enough**;
+free-plan bars can lag about 12 weeks and that lag is labeled via
+`priceAsOf` / `priceLagNote`. **auto** prices pick the complete
 series with more aligned returns (J-Quants wins ties). Market stays Yahoo
 Nikkei 225. **auto** picks the first complete fundamentals source per name
 (EDINET XBRL, then J-Quants FY, then Yahoo timeseries). See

@@ -9,7 +9,12 @@ from models.pipeline import evaluate_universe
 from providers.errors import BotWallError, FetchError, InvalidPriceDataError
 from providers.http import fetch_jquants_bars_json, jquants_bars_url
 from providers.jquants_bars import parse_jquants_bars
-from providers.loader import load_auto_snapshot, load_jquants_snapshot
+from providers.loader import (
+    JQUANTS_FREE_LAG_NOTE,
+    JQUANTS_FREE_LAG_NOTE_JA,
+    load_auto_snapshot,
+    load_jquants_snapshot,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 YAHOO_DIR = ROOT / "tests" / "data" / "yahoo"
@@ -162,6 +167,10 @@ def test_jquants_snapshot_prefers_bars_over_yahoo(tmp_path: Path):
     ranked = next(row for row in computed if row["ticker"] == "7203")
     assert ranked["eligible"] is True
     assert ranked["priceSource"] == "jquants_bars"
+    meta = snapshot.meta()
+    assert meta["priceLagNote"] == JQUANTS_FREE_LAG_NOTE
+    assert "12 weeks" in meta["priceLagNote"]
+    assert meta["priceLagNoteJa"] == JQUANTS_FREE_LAG_NOTE_JA
 
 
 def test_jquants_snapshot_falls_back_to_yahoo_without_bars(tmp_path: Path):
@@ -177,6 +186,8 @@ def test_jquants_snapshot_falls_back_to_yahoo_without_bars(tmp_path: Path):
     assert snapshot.price_source == "yahoo_chart"
     assert toyota["priceSource"] == "yahoo_chart"
     assert toyota["price"] == pytest.approx(3013.0)
+    assert snapshot.meta()["priceLagNote"] is None
+    assert snapshot.meta()["priceLagNoteJa"] is None
 
 
 def test_partial_jquants_bars_do_not_block_yahoo(tmp_path: Path):
@@ -269,6 +280,7 @@ def test_auto_mixed_price_sources_across_names(tmp_path: Path):
     )
     by_ticker = {row["ticker"]: row for row in snapshot.stocks}
     assert snapshot.price_source == "jquants_bars+yahoo_chart"
+    assert snapshot.meta()["priceLagNote"] == JQUANTS_FREE_LAG_NOTE
     assert by_ticker["7203"]["price"] == pytest.approx(3013.0)
     assert by_ticker["7203"]["priceSource"] == "jquants_bars"
     assert by_ticker["6758"]["price"] == pytest.approx(3780.0)
