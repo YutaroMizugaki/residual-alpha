@@ -125,3 +125,48 @@ def parse_jquants_summary(payload: Any, *, expected_code: str | None = None) -> 
         roe_history=roe_history,
         fiscal_year_end=fiscal_year_end,
     )
+
+
+SUMMARY_COMPACT_KEYS = (
+    "DiscDate",
+    "DiscNo",
+    "Code",
+    "DocType",
+    "CurPerType",
+    "CurPerEn",
+    "NP",
+    "Eq",
+    "ShEq",
+    "ShOutFY",
+    "TrShFY",
+)
+
+
+def compact_jquants_summary(payload: Any, *, expected_code: str | None = None) -> dict[str, Any]:
+    """Keep FY rows and parser fields. Empty strings stay empty, not 0."""
+    parse_jquants_summary(payload, expected_code=expected_code)
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    rows = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        raise InvalidPriceDataError("J-Quants summary data is invalid")
+    compact_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if expected_code and not codes_match(str(row.get("Code") or ""), expected_code):
+            continue
+        if str(row.get("CurPerType") or "") != "FY":
+            continue
+        if not row.get("CurPerEn"):
+            continue
+        compact_row: dict[str, Any] = {}
+        for key in SUMMARY_COMPACT_KEYS:
+            if key not in row:
+                continue
+            value = row[key]
+            compact_row[key] = value
+        compact_rows.append(compact_row)
+    if not compact_rows:
+        raise FetchError(f"{expected_code or 'summary'} has no FY rows")
+    return {"data": compact_rows}

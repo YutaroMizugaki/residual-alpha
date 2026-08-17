@@ -14,7 +14,7 @@ from providers.http import (
     jquants_bars_url,
     parse_jquants_subscription_window,
 )
-from providers.jquants_bars import parse_jquants_bars
+from providers.jquants_bars import compact_jquants_bars, parse_jquants_bars
 from providers.loader import (
     JQUANTS_FREE_LAG_NOTE,
     JQUANTS_FREE_LAG_NOTE_JA,
@@ -433,3 +433,141 @@ def test_jquants_source_keeps_short_bars_when_yahoo_is_longer(tmp_path: Path):
     ranked = next(row for row in computed if row["ticker"] == "7203")
     assert ranked["returnCount"] == 19
     assert ranked["priceSource"] == "jquants_bars"
+
+
+def test_compact_jquants_bars_drops_ohlc_nulls_and_zero():
+    payload = {
+        "data": [
+            {
+                "Date": "2026-01-05",
+                "Code": "72030",
+                "O": 1,
+                "H": 2,
+                "L": 0.5,
+                "C": 1,
+                "AdjC": 10.0,
+                "AdjFactor": 1.0,
+            },
+            {"Date": "2026-01-06", "Code": "72030", "C": 11.0, "AdjC": None},
+            {"Date": "2026-01-07", "Code": "72030", "C": 12.0, "AdjC": ""},
+            {"Date": "2026-01-08", "Code": "72030", "C": 0, "AdjC": 0},
+            {"Date": "2026-01-09", "Code": "72030", "C": 13.0, "AdjC": 12.0},
+        ]
+    }
+    compact = compact_jquants_bars(payload, expected_code="72030")
+    rows = compact["data"]
+    assert [row["Date"] for row in rows] == ["2026-01-05", "2026-01-09"]
+    assert [row["AdjC"] for row in rows] == pytest.approx([10.0, 12.0])
+    assert all(set(row) == {"Date", "Code", "AdjC"} for row in rows)
+    series = parse_jquants_bars(compact, expected_code="72030")
+    assert [price for _, price in series.points] == pytest.approx([10.0, 12.0])
+
+
+def test_compact_jquants_bars_keeps_recorded_last_close():
+    payload = json.loads((BARS_DIR / "72030.json").read_text(encoding="utf-8"))
+    original = parse_jquants_bars(payload, expected_code="72030")
+    compact = compact_jquants_bars(payload, expected_code="72030")
+    compacted = parse_jquants_bars(compact, expected_code="72030")
+    assert compacted.last() == original.last()
+    assert compacted.last()[1] == pytest.approx(3013.0)
+    assert len(compacted.points) == len(original.points)
+    assert "O" not in compact["data"][0]
+    assert "C" not in compact["data"][0]
+
+
+def test_compact_jquants_bars_zero_only_is_missing():
+    payload = json.loads((BARS_DIR / "zero_adjc.json").read_text(encoding="utf-8"))
+    with pytest.raises(FetchError):
+        compact_jquants_bars(payload, expected_code="72030")
+
+
+def test_compact_jquants_dir_universe_only(tmp_path: Path):
+    from compact_jquants_caches import compact_jquants_dir
+
+    summaries_src = tmp_path / "src_summaries"
+    bars_src = tmp_path / "src_bars"
+    summaries_dst = tmp_path / "dst_summaries"
+    bars_dst = tmp_path / "dst_bars"
+    summaries_src.mkdir()
+    bars_src.mkdir()
+    (summaries_src / "noise.json").write_text('{"keep":true}\n', encoding="utf-8")
+    (bars_src / "empty_adjc.json").write_text(
+        (BARS_DIR / "empty_adjc.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (summaries_src / "72030.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "DiscDate": "2026-05-08",
+                        "DiscNo": "1",
+                        "Code": "72030",
+                        "DocType": "FYFinancialStatements_Consolidated_IFRS",
+                        "CurPerType": "FY",
+                        "CurPerEn": "2026-03-31",
+                        "NP": "100",
+                        "Eq": "1000",
+                        "ShEq": "1000",
+                        "ShOutFY": "100",
+                        "TrShFY": "0",
+                        "noise": "drop",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bars_src / "72030.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "Date": "2026-01-05",
+                        "Code": "72030",
+                        "O": 9,
+                        "C": 10,
+                        "AdjC": 10.0,
+                    },
+                    {"Date": "2026-01-06", "Code": "72030", "C": 0, "AdjC": None},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    universe = {
+        "marketSymbol": "^N225",
+        "stocks": [
+            {
+                "ticker": "7203",
+                "yahooSymbol": "7203.T",
+                "jquantsCode": "72030",
+                "companyName": "Toyota",
+            }
+        ],
+    }
+    assert (
+        compact_jquants_dir(
+            summaries_src,
+            bars_src,
+            summaries_dst,
+            bars_dst,
+            universe=universe,
+        )
+        == 0
+    )
+    assert not (summaries_dst / "noise.json").exists()
+    assert not (bars_dst / "empty_adjc.json").exists()
+    bars = json.loads((bars_dst / "72030.json").read_text(encoding="utf-8"))
+    assert bars["data"][0]["AdjC"] == pytest.approx(10.0)
+    assert "O" not in bars["data"][0]
+    summary = json.loads((summaries_dst / "72030.json").read_text(encoding="utf-8"))
+    assert "noise" not in summary["data"][0]
+    missing = compact_jquants_dir(
+        tmp_path / "empty",
+        bars_src,
+        summaries_dst,
+        bars_dst,
+        universe=universe,
+    )
+    assert missing == 1

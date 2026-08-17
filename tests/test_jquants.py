@@ -8,7 +8,7 @@ import pytest
 from models.pipeline import evaluate_universe
 from providers.errors import BotWallError, FetchError, InvalidPriceDataError
 from providers.http import fetch_jquants_summary_json, jquants_summary_url, redact_url
-from providers.jquants_summary import parse_jquants_summary
+from providers.jquants_summary import compact_jquants_summary, parse_jquants_summary
 from providers.loader import load_jquants_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -243,3 +243,38 @@ def test_jquants_without_summaries_stays_ineligible(tmp_path: Path):
 def test_jquants_invalid_payload_shape():
     with pytest.raises(InvalidPriceDataError):
         parse_jquants_summary(["not", "an", "object"])
+
+
+def test_compact_jquants_summary_keeps_fy_fields_and_negative_np():
+    payload = json.loads((JQUANTS_DIR / "67580.json").read_text(encoding="utf-8"))
+    noisy = {
+        "data": payload["data"]
+        + [
+            {
+                "Code": "67580",
+                "CurPerType": "1Q",
+                "CurPerEn": "2026-06-30",
+                "NP": "1",
+                "noise": "drop",
+            }
+        ]
+    }
+    compact = compact_jquants_summary(noisy, expected_code="67580")
+    assert all(row.get("CurPerType") == "FY" for row in compact["data"])
+    assert all("noise" not in row for row in compact["data"])
+    latest = compact["data"][-1]
+    assert latest["NP"] == "-326865000000.0"
+    again = parse_jquants_summary(compact, expected_code="67580")
+    original = parse_jquants_summary(payload, expected_code="67580")
+    assert again.latest_roe == pytest.approx(original.latest_roe)
+    assert again.latest_roe is not None and again.latest_roe < 0
+    assert again.book_value == pytest.approx(original.book_value)
+
+
+def test_compact_jquants_summary_keeps_empty_profit_missing():
+    payload = {"data": [_fy(NP="")]}
+    compact = compact_jquants_summary(payload, expected_code="72030")
+    assert compact["data"][0]["NP"] == ""
+    fundamentals = parse_jquants_summary(compact, expected_code="72030")
+    assert fundamentals.latest_roe is None
+    assert fundamentals.roe_history is None

@@ -53,6 +53,7 @@ No trading
 - `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
 - `scripts/compact_yahoo_charts.py` — optional compact/align of Yahoo chart JSON for recorded tests (no fetch, no cron)
 - `scripts/fetch_jquants_data.py` — optional J-Quants FY summary + daily bars download
+- `scripts/compact_jquants_caches.py` — optional compact of J-Quants FY + AdjC JSON for recorded tests (no fetch, no cron)
 - `scripts/fetch_edinet_list.py` — optional EDINET document list
 - `scripts/fetch_edinet_xbrl.py` — optional EDINET yuho XBRL zip download
 - `scripts/providers/universe.json` — 10 listed names for non-fixture sources

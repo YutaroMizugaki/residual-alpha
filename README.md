@@ -76,6 +76,19 @@ python scripts/build_public_data.py --source jquants
 Prices prefer cached J-Quants daily AdjC, then Yahoo chart. Market stays
 Yahoo Nikkei 225. Fundamentals come from J-Quants FY summary rows.
 
+After a live fetch, compact universe caches before copying into
+`tests/data/jquants` and `tests/data/jquants_bars`. Empty AdjC and
+non-positive AdjC are dropped, not filled with `0`. Files such as
+`empty_adjc.json` stay out of the write set.
+
+```bash
+python scripts/compact_jquants_caches.py \
+  --src-summaries data/raw/jquants --src-bars data/raw/jquants_bars \
+  --dst-summaries tests/data/jquants --dst-bars tests/data/jquants_bars
+```
+
+The compact script does not fetch, does not write `public/data`, and is not CI.
+
 ```bash
 # document list (needs EDINET_API_KEY)
 python scripts/fetch_edinet_list.py --date 2026-05-08
