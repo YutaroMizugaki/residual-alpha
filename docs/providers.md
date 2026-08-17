@@ -58,6 +58,8 @@ EDINET XBRL (edinet source), from the PublicDoc instance in a type=1 zip:
 - Line-item members (`CapitalStockMember`, `Row1Member`, …) are skipped.
   Consolidation members are not skipped. Consolidated contexts win over
   non-consolidated. Quarterly durations are skipped.
+- Multiple yuho zips in one directory keep each filing's current + prior
+  year (the audited statements). Older comparatives are not merged on top.
 - `xsi:nil` is missing, not 0. Non-JPY monetary units are rejected.
 
 Only `CurPerType=FY` rows are used for J-Quants. Consolidated filings win over non-consolidated

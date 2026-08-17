@@ -46,6 +46,7 @@ TREASURY_SHARE_NAMES = (
     "NumberOfTreasuryStockAtTheEndOfFiscalYear",
     "TotalNumberOfSharesHeldTreasurySharesEtc",
 )
+STATEMENT_YEARS = 2
 YEAR_LABELS = (
     "CurrentYear",
     "Prior1Year",
@@ -391,6 +392,24 @@ def parse_edinet_xbrl(payload: str | bytes | Path) -> Fundamentals:
     raise FetchError("EDINET XBRL payload is not XML")
 
 
+def _clip_statement_years(
+    equity: dict[date, float],
+    income: dict[date, float],
+    issued: dict[date, float],
+    treasury: dict[date, float],
+) -> YearMaps:
+    """Keep current + prior from one yuho. Older comparatives can be NetAssets."""
+    years = sorted(set(equity) | set(income), reverse=True)[:STATEMENT_YEARS]
+    if not years:
+        years = sorted(set(issued) | set(treasury), reverse=True)[:STATEMENT_YEARS]
+    return (
+        {period: equity[period] for period in years if period in equity},
+        {period: income[period] for period in years if period in income},
+        {period: issued[period] for period in years if period in issued},
+        {period: treasury[period] for period in years if period in treasury},
+    )
+
+
 def _maps_from_dir(path: Path) -> YearMaps:
     if not path.exists():
         raise FetchError(f"cached EDINET XBRL missing: {path}")
@@ -413,6 +432,8 @@ def _maps_from_dir(path: Path) -> YearMaps:
                 eq, ni, sh, tr = _maps_from_xml(data.decode("utf-8"))
         except (FetchError, BotWallError, InvalidPriceDataError, UnicodeDecodeError):
             continue
+        if len(files) > 1:
+            eq, ni, sh, tr = _clip_statement_years(eq, ni, sh, tr)
         equity.update(eq)
         income.update(ni)
         issued.update(sh)

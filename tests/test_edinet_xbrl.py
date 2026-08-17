@@ -282,6 +282,37 @@ def test_parse_edinet_xbrl_dir_merges_files(tmp_path: Path):
     assert fundamentals.book_value == pytest.approx(39_918_854.0)
 
 
+def test_parse_edinet_xbrl_dir_keeps_current_year_over_later_comparative(tmp_path: Path):
+    older = make_ifrs_xbrl(
+        [
+            ("2024-03-31", "2023-04-01", "2758058000000", "369642000000", "243207000"),
+            ("2023-03-31", "2022-04-01", "2461196000000", "362963000000", "243207000"),
+        ]
+    )
+    newer = make_ifrs_xbrl(
+        [
+            ("2026-03-31", "2025-04-01", "3413911000000", "445185000000", "243207684"),
+            ("2025-03-31", "2024-04-01", "3077874000000", "398656000000", "243207000"),
+        ],
+        extra="""
+  <xbrli:context id="Prior2YearInstant">
+    <xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2024-03-31</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <jpigp:NetAssets contextRef="Prior2YearInstant" unitRef="JPY" decimals="-6">1</jpigp:NetAssets>
+""",
+    )
+    (tmp_path / "older.xbrl").write_text(older, encoding="utf-8")
+    (tmp_path / "newer.xbrl").write_text(newer, encoding="utf-8")
+    fundamentals = parse_edinet_xbrl_dir(tmp_path)
+    assert fundamentals.book_value == pytest.approx(3_413_911.0)
+    assert fundamentals.roe_history is not None
+    assert len(fundamentals.roe_history) == 3
+    assert fundamentals.roe_history[0] == pytest.approx(369_642_000_000 / 2_461_196_000_000)
+    assert fundamentals.roe_history[1] == pytest.approx(398_656_000_000 / 2_758_058_000_000)
+    assert fundamentals.latest_roe == pytest.approx(445_185_000_000 / 3_077_874_000_000)
+
+
 def test_context_is_breakdown_skips_line_items_not_consolidation():
     assert context_is_breakdown("CurrentYearInstant") is False
     assert context_is_breakdown("CurrentYearInstant_NonConsolidatedMember") is False
