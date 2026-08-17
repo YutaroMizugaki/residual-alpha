@@ -1,0 +1,37 @@
+{
+  "metadata": {
+    "status": "200",
+    "resultset": {
+      "count": 3
+    }
+  },
+  "results": [
+    {
+      "docID": "S100AAAA",
+      "edinetCode": "E02144",
+      "secCode": "72030",
+      "filerName": "トヨタ自動車株式会社",
+      "docTypeCode": "120",
+      "periodEnd": "2026-03-31",
+      "xbrlFlag": "1"
+    },
+    {
+      "docID": "S100BBBB",
+      "edinetCode": "E02144",
+      "secCode": "72030",
+      "filerName": "トヨタ自動車株式会社",
+      "docTypeCode": "160",
+      "periodEnd": "2026-03-31",
+      "xbrlFlag": "0"
+    },
+    {
+      "docID": "S100CCCC",
+      "edinetCode": "E01768",
+      "secCode": "67580",
+      "filerName": "ソニーグループ株式会社",
+      "docTypeCode": "'120'",
+      "periodEnd": "2025-03-31",
+      "xbrlFlag": "1"
+    }
+  ]
+}

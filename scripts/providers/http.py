@@ -1,8 +1,10 @@
-"""HTTP helpers. HTML challenge pages are fetch failures."""
+"""HTTP helpers. HTML challenge pages are fetch failures. Keys are never logged."""
 
 from __future__ import annotations
 
 import json
+import os
+import re
 from typing import Callable
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -16,9 +18,17 @@ DEFAULT_HEADERS = {
     "Accept": "application/json,text/csv,text/plain;q=0.9,*/*;q=0.8",
 }
 
+JQUANTS_SUMMARY_URL = "https://api.jquants.com/v2/fins/summary"
+EDINET_DOCUMENTS_URL = "https://api.edinet-fsa.go.jp/api/v2/documents.json"
 
-def default_fetcher(url: str) -> tuple[int, str, str]:
-    request = Request(url, headers=DEFAULT_HEADERS)
+
+def redact_url(url: str) -> str:
+    redacted = re.sub(r"(Subscription-Key=)[^&]+", r"\1REDACTED", url, flags=re.IGNORECASE)
+    return redacted
+
+
+def default_fetcher(url: str, extra_headers: dict[str, str] | None = None) -> tuple[int, str, str]:
+    request = Request(url, headers={**DEFAULT_HEADERS, **(extra_headers or {})})
     try:
         with urlopen(request, timeout=20) as response:
             status = int(getattr(response, "status", 200))
@@ -28,7 +38,7 @@ def default_fetcher(url: str) -> tuple[int, str, str]:
     except FetchError:
         raise
     except Exception as exc:  # noqa: BLE001 — network failures become FetchError
-        raise FetchError(f"request failed: {url}") from exc
+        raise FetchError(f"request failed: {redact_url(url)}") from exc
 
 
 def reject_html(body: str, content_type: str) -> None:
@@ -114,3 +124,94 @@ def fetch_yahoo_fundamentals_json(
 
 def cache_filename(symbol: str) -> str:
     return symbol.replace("^", "_") + ".json"
+
+
+def _parse_json_body(body: str, *, label: str) -> dict:
+    reject_html(body, "application/json")
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise FetchError(f"{label} JSON decode failed") from exc
+    if not isinstance(payload, dict):
+        raise FetchError(f"{label} JSON is not an object")
+    return payload
+
+
+def jquants_summary_url(code: str, *, pagination_key: str | None = None) -> str:
+    query = {"code": code}
+    if pagination_key:
+        query["pagination_key"] = pagination_key
+    return f"{JQUANTS_SUMMARY_URL}?{urlencode(query)}"
+
+
+def fetch_jquants_summary_json(
+    code: str,
+    *,
+    api_key: str | None = None,
+    fetcher: Fetcher | None = None,
+) -> dict:
+    """
+    Live calls need JQUANTS_API_KEY (x-api-key). Injected fetchers skip the key
+    so CI can use recorded payloads.
+    """
+    rows: list[object] = []
+    pagination_key: str | None = None
+    key = api_key if api_key is not None else os.environ.get("JQUANTS_API_KEY")
+    extra = {"x-api-key": key, "Accept": "application/json"} if fetcher is None else None
+    if fetcher is None and not key:
+        raise FetchError("JQUANTS_API_KEY is not set")
+
+    for _ in range(20):
+        url = jquants_summary_url(code, pagination_key=pagination_key)
+        if fetcher is None:
+            status, content_type, body = default_fetcher(url, extra_headers=extra)
+        else:
+            status, content_type, body = fetcher(url)
+        if status in (401, 403):
+            raise FetchError(f"J-Quants HTTP {status} for {code}")
+        if status != 200:
+            raise FetchError(f"J-Quants HTTP {status} for {code}")
+        reject_html(body, content_type)
+        payload = _parse_json_body(body, label=f"J-Quants summary {code}")
+        data = payload.get("data")
+        if not isinstance(data, list):
+            raise FetchError(f"J-Quants summary data missing for {code}")
+        rows.extend(data)
+        pagination_key = payload.get("pagination_key")
+        if not pagination_key:
+            return {"data": rows}
+    raise FetchError(f"J-Quants summary pagination exceeded for {code}")
+
+
+def edinet_documents_url(date: str, *, api_key: str | None = None) -> str:
+    query = {"date": date, "type": "2"}
+    if api_key:
+        query["Subscription-Key"] = api_key
+    return f"{EDINET_DOCUMENTS_URL}?{urlencode(query)}"
+
+
+def fetch_edinet_documents_json(
+    date: str,
+    *,
+    api_key: str | None = None,
+    fetcher: Fetcher | None = None,
+) -> dict:
+    """
+    Live calls need EDINET_API_KEY. XBRL zips are not downloaded.
+    Injected fetchers skip the key so CI can use recorded payloads.
+    """
+    if fetcher is None:
+        key = api_key if api_key is not None else os.environ.get("EDINET_API_KEY")
+        if not key:
+            raise FetchError("EDINET_API_KEY is not set")
+        url = edinet_documents_url(date, api_key=key)
+        status, content_type, body = default_fetcher(url)
+    else:
+        url = edinet_documents_url(date)
+        status, content_type, body = fetcher(url)
+    if status in (401, 403):
+        raise FetchError(f"EDINET HTTP {status}")
+    if status != 200:
+        raise FetchError(f"EDINET HTTP {status}")
+    reject_html(body, content_type)
+    return _parse_json_body(body, label="EDINET documents")

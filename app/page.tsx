@@ -22,7 +22,11 @@ export default async function HomePage() {
           API and annual equity/income/shares from Yahoo timeseries (no API
           key, no yfinance package)
         </li>
-        <li>EDINET / J-Quants are not fetched (API keys required)</li>
+        <li>
+          J-Quants source can replace those fundamentals with FY summary rows
+          when <code>JQUANTS_API_KEY</code> is set for a live fetch
+        </li>
+        <li>EDINET document lists can be fetched with a key; XBRL is not parsed</li>
         <li>No database or backend API</li>
         {isFixture ? <li>Tickers 1001–1006 are fictional test companies</li> : null}
       </ul>

@@ -14,7 +14,11 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from models.pipeline import detail_row, evaluate_universe, ranking_row  # noqa: E402
-from providers.loader import load_fixture_snapshot, load_free_snapshot  # noqa: E402
+from providers.loader import (  # noqa: E402
+    load_fixture_snapshot,
+    load_free_snapshot,
+    load_jquants_snapshot,
+)
 
 PUBLIC_DATA = ROOT / "public" / "data"
 RANKINGS_PATH = PUBLIC_DATA / "rankings.json"
@@ -30,21 +34,32 @@ def write_json(path: Path, payload: object) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", choices=("fixture", "free"), default="fixture")
+    parser.add_argument("--source", choices=("fixture", "free", "jquants"), default="fixture")
     parser.add_argument("--raw-dir", default=str(ROOT / "data" / "raw" / "yahoo"))
     parser.add_argument(
         "--fundamentals-dir",
         default=str(ROOT / "data" / "raw" / "yahoo_fundamentals"),
     )
-    parser.add_argument("--fetch", action="store_true", help="free source only: download Yahoo JSON")
+    parser.add_argument("--jquants-dir", default=str(ROOT / "data" / "raw" / "jquants"))
+    parser.add_argument(
+        "--fetch",
+        action="store_true",
+        help="free/jquants: download remote JSON (jquants live fetch needs JQUANTS_API_KEY)",
+    )
     args = parser.parse_args()
 
     if args.source == "fixture":
         snapshot = load_fixture_snapshot()
-    else:
+    elif args.source == "free":
         snapshot = load_free_snapshot(
             raw_dir=Path(args.raw_dir),
             fundamentals_dir=Path(args.fundamentals_dir),
+            fetch=args.fetch,
+        )
+    else:
+        snapshot = load_jquants_snapshot(
+            raw_dir=Path(args.raw_dir),
+            jquants_dir=Path(args.jquants_dir),
             fetch=args.fetch,
         )
 
