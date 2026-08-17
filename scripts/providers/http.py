@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import date, timedelta
 from typing import Callable
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -20,6 +21,7 @@ DEFAULT_HEADERS = {
 }
 
 JQUANTS_SUMMARY_URL = "https://api.jquants.com/v2/fins/summary"
+JQUANTS_BARS_URL = "https://api.jquants.com/v2/equities/bars/daily"
 EDINET_DOCUMENTS_URL = "https://api.edinet-fsa.go.jp/api/v2/documents.json"
 EDINET_DOCUMENT_BASE = "https://api.edinet-fsa.go.jp/api/v2/documents"
 
@@ -183,6 +185,71 @@ def fetch_jquants_summary_json(
         if not pagination_key:
             return {"data": rows}
     raise FetchError(f"J-Quants summary pagination exceeded for {code}")
+
+
+def jquants_bars_window(range_: str = "1y") -> tuple[str, str]:
+    days = {"1y": 400, "2y": 800, "5y": 1900}.get(range_, 400)
+    end = date.today()
+    start = end - timedelta(days=days)
+    return start.isoformat(), end.isoformat()
+
+
+def jquants_bars_url(
+    code: str,
+    *,
+    from_: str | None = None,
+    to: str | None = None,
+    pagination_key: str | None = None,
+) -> str:
+    query = {"code": code}
+    if from_:
+        query["from"] = from_
+    if to:
+        query["to"] = to
+    if pagination_key:
+        query["pagination_key"] = pagination_key
+    return f"{JQUANTS_BARS_URL}?{urlencode(query)}"
+
+
+def fetch_jquants_bars_json(
+    code: str,
+    *,
+    from_: str | None = None,
+    to: str | None = None,
+    api_key: str | None = None,
+    fetcher: Fetcher | None = None,
+) -> dict:
+    """
+    Live calls need JQUANTS_API_KEY (x-api-key). Injected fetchers skip the key
+    so CI can use recorded payloads.
+    """
+    rows: list[object] = []
+    pagination_key: str | None = None
+    key = api_key if api_key is not None else os.environ.get("JQUANTS_API_KEY")
+    extra = {"x-api-key": key, "Accept": "application/json"} if fetcher is None else None
+    if fetcher is None and not key:
+        raise FetchError("JQUANTS_API_KEY is not set")
+
+    for _ in range(20):
+        url = jquants_bars_url(code, from_=from_, to=to, pagination_key=pagination_key)
+        if fetcher is None:
+            status, content_type, body = default_fetcher(url, extra_headers=extra)
+        else:
+            status, content_type, body = fetcher(url)
+        if status in (401, 403):
+            raise FetchError(f"J-Quants HTTP {status} for {code}")
+        if status != 200:
+            raise FetchError(f"J-Quants HTTP {status} for {code}")
+        reject_html(body, content_type)
+        payload = _parse_json_body(body, label=f"J-Quants bars {code}")
+        data = payload.get("data")
+        if not isinstance(data, list):
+            raise FetchError(f"J-Quants bars data missing for {code}")
+        rows.extend(data)
+        pagination_key = payload.get("pagination_key")
+        if not pagination_key:
+            return {"data": rows}
+    raise FetchError(f"J-Quants bars pagination exceeded for {code}")
 
 
 def edinet_documents_url(date: str, *, api_key: str | None = None) -> str:

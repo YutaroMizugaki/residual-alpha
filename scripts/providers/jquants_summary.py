@@ -17,7 +17,7 @@ from providers.fundamentals_common import (
 )
 
 
-def _codes_match(row_code: str, expected: str) -> bool:
+def codes_match(row_code: str, expected: str) -> bool:
     left = row_code.strip()
     right = expected.strip()
     if left == right:
@@ -43,7 +43,7 @@ def _select_fy_rows(rows: list[dict[str, Any]], expected_code: str | None) -> di
     for row in rows:
         if not isinstance(row, dict):
             continue
-        if expected_code and not _codes_match(str(row.get("Code") or ""), expected_code):
+        if expected_code and not codes_match(str(row.get("Code") or ""), expected_code):
             continue
         if str(row.get("CurPerType") or "") != "FY":
             continue

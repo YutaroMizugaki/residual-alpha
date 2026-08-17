@@ -11,10 +11,13 @@ from providers.edinet_xbrl import parse_edinet_xbrl_dir
 from providers.errors import FetchError, ProviderError
 from providers.http import (
     cache_filename,
+    fetch_jquants_bars_json,
     fetch_jquants_summary_json,
     fetch_yahoo_chart_json,
     fetch_yahoo_fundamentals_json,
+    jquants_bars_window,
 )
+from providers.jquants_bars import parse_jquants_bars
 from providers.jquants_summary import parse_jquants_summary
 from providers.series import aligned_simple_returns
 from providers.stooq_csv import parse_stooq_csv
@@ -125,6 +128,30 @@ def _blank_stock(ticker: str, company_name: str) -> dict[str, Any]:
     }
 
 
+def _apply_price_series(
+    stock: dict[str, Any],
+    series,
+    market_series,
+    as_of_dates: list[str],
+) -> None:
+    last = series.last()
+    stock_returns, market_returns = aligned_simple_returns(series, market_series)
+    if last is not None:
+        stock["price"] = last[1]
+        stock["priceAsOf"] = last[0].isoformat()
+        as_of_dates.append(stock["priceAsOf"])
+    if stock_returns and market_returns:
+        stock["stockReturns"] = stock_returns
+        stock["marketReturns"] = market_returns
+
+
+def _price_complete(series, market_series) -> bool:
+    if series.last() is None:
+        return False
+    stock_returns, market_returns = aligned_simple_returns(series, market_series)
+    return len(stock_returns) >= 2 and len(market_returns) >= 2
+
+
 def _apply_yahoo_prices(
     stock: dict[str, Any],
     *,
@@ -135,17 +162,65 @@ def _apply_yahoo_prices(
 ) -> None:
     try:
         series = parse_yahoo_chart(load_chart(yahoo_symbol), expected_symbol=yahoo_symbol)
-        last = series.last()
-        stock_returns, market_returns = aligned_simple_returns(series, market_series)
-        if last is not None:
-            stock["price"] = last[1]
-            stock["priceAsOf"] = last[0].isoformat()
-            as_of_dates.append(stock["priceAsOf"])
-        if stock_returns and market_returns:
-            stock["stockReturns"] = stock_returns
-            stock["marketReturns"] = market_returns
+        _apply_price_series(stock, series, market_series, as_of_dates)
     except ProviderError:
         pass
+
+
+def _apply_price_waterfall(
+    stock: dict[str, Any],
+    *,
+    jq_code: str,
+    yahoo_symbol: str,
+    load_bars,
+    load_chart,
+    market_series,
+    as_of_dates: list[str],
+    used_price_sources: set[str],
+) -> None:
+    """J-Quants AdjC bars first, then Yahoo chart. Do not mix series inside one name."""
+    chosen_label: str | None = None
+    chosen_series = None
+    fallback_label: str | None = None
+    fallback_series = None
+
+    def take(label: str, series) -> None:
+        nonlocal chosen_label, chosen_series, fallback_label, fallback_series
+        if chosen_series is not None:
+            return
+        if _price_complete(series, market_series):
+            chosen_label = label
+            chosen_series = series
+        elif fallback_series is None and series.last() is not None:
+            fallback_label = label
+            fallback_series = series
+
+    try:
+        take("jquants_bars", parse_jquants_bars(load_bars(jq_code), expected_code=jq_code))
+    except ProviderError:
+        pass
+    if chosen_series is None:
+        try:
+            take(
+                "yahoo_chart",
+                parse_yahoo_chart(load_chart(yahoo_symbol), expected_symbol=yahoo_symbol),
+            )
+        except ProviderError:
+            pass
+    if chosen_series is None:
+        chosen_label = fallback_label
+        chosen_series = fallback_series
+    if chosen_series is not None:
+        _apply_price_series(stock, chosen_series, market_series, as_of_dates)
+        used_price_sources.add(chosen_label)
+
+
+def _price_source_label(used: set[str]) -> str:
+    labels = []
+    for name in ("jquants_bars", "yahoo_chart"):
+        if name in used:
+            labels.append(name)
+    return "+".join(labels) if labels else "missing"
 
 
 def _apply_parsed_fundamentals(stock: dict[str, Any], fundamentals) -> bool:
@@ -300,16 +375,19 @@ def load_jquants_snapshot(
     fundamentals_path: Path = FUNDAMENTALS_PATH,
     raw_dir: Path | None = None,
     jquants_dir: Path | None = None,
+    jquants_bars_dir: Path | None = None,
     fetch: bool = False,
     range_: str | None = None,
     fetcher=None,
     jquants_api_key: str | None = None,
 ) -> DataSnapshot:
     """
-    Prices from Yahoo chart JSON. Fundamentals from J-Quants v2 /fins/summary.
+    Prices from J-Quants v2 /equities/bars/daily AdjC, then Yahoo chart.
+    Fundamentals from J-Quants v2 /fins/summary.
 
-    Live J-Quants calls need JQUANTS_API_KEY. Use --source edinet for XBRL.
-    Missing values are not replaced with 0.
+    Market remains Yahoo Nikkei 225 (J-Quants does not publish Nikkei OHLC).
+    Live J-Quants calls need JQUANTS_API_KEY. Missing values are not replaced
+    with 0.
     """
     universe = load_universe(universe_path)
     overlay_map = load_fundamentals(fundamentals_path)
@@ -317,6 +395,8 @@ def load_jquants_snapshot(
     lookback = range_ or str(universe.get("range", "1y"))
     raw_dir = raw_dir or (ROOT / "data" / "raw" / "yahoo")
     jquants_dir = jquants_dir or (ROOT / "data" / "raw" / "jquants")
+    jquants_bars_dir = jquants_bars_dir or (ROOT / "data" / "raw" / "jquants_bars")
+    bars_from, bars_to = jquants_bars_window(lookback)
 
     def load_chart(symbol: str) -> dict[str, Any]:
         if fetch:
@@ -328,23 +408,38 @@ def load_jquants_snapshot(
             return fetch_jquants_summary_json(code, api_key=jquants_api_key, fetcher=fetcher)
         return _payload_from_raw(jquants_dir, code)
 
+    def load_bars(code: str) -> dict[str, Any]:
+        if fetch:
+            return fetch_jquants_bars_json(
+                code,
+                from_=bars_from,
+                to=bars_to,
+                api_key=jquants_api_key,
+                fetcher=fetcher,
+            )
+        return _payload_from_raw(jquants_bars_dir, code)
+
     market_series = parse_yahoo_chart(load_chart(market_symbol), expected_symbol=market_symbol)
     stocks: list[dict[str, Any]] = []
     as_of_dates: list[str] = []
     used_jquants = False
     used_overlay = False
+    used_price_sources: set[str] = set()
 
     for item in universe["stocks"]:
         ticker = str(item["ticker"])
         yahoo_symbol = str(item["yahooSymbol"])
         code = jquants_code(item)
         stock = _blank_stock(ticker, str(item["companyName"]))
-        _apply_yahoo_prices(
+        _apply_price_waterfall(
             stock,
+            jq_code=code,
             yahoo_symbol=yahoo_symbol,
+            load_bars=load_bars,
             load_chart=load_chart,
             market_series=market_series,
             as_of_dates=as_of_dates,
+            used_price_sources=used_price_sources,
         )
         try:
             used = _apply_parsed_fundamentals(
@@ -373,16 +468,18 @@ def load_jquants_snapshot(
     return DataSnapshot(
         source="jquants",
         source_label="J-Quants",
-        price_source="yahoo_chart",
+        price_source=_price_source_label(used_price_sources),
         fundamentals_source=fundamentals_source,
         market_symbol=market_symbol,
         as_of_date=as_of,
         disclaimer_ja=(
-            "価格は Yahoo Finance chart、財務は J-Quants 決算短信サマリー（キー必須）です。"
+            "価格は J-Quants 日足 AdjC（なければ Yahoo chart）。"
+            "市場は Yahoo 日経平均。財務は J-Quants 決算短信サマリー（キー必須）です。"
             "欠損は 0 にしません。投資助言ではありません。"
         ),
         disclaimer_en=(
-            "Prices from Yahoo Finance chart; fundamentals from J-Quants FY summary "
+            "Prices from J-Quants daily AdjC (Yahoo chart if bars are missing). "
+            "Market is Yahoo Nikkei 225. Fundamentals from J-Quants FY summary "
             "(API key required for live fetch). Missing values are not replaced "
             "with 0. Not investment advice."
         ),
@@ -498,19 +595,22 @@ def load_auto_snapshot(
     raw_dir: Path | None = None,
     fundamentals_dir: Path | None = None,
     jquants_dir: Path | None = None,
+    jquants_bars_dir: Path | None = None,
     edinet_dir: Path | None = None,
     range_: str | None = None,
     fetcher=None,
 ) -> DataSnapshot:
     """
-    Prices from Yahoo chart JSON. Fundamentals per name, first complete source:
+    Prices per name, first complete series: J-Quants daily AdjC → Yahoo chart.
+    Market is Yahoo Nikkei 225. Fundamentals per name, first complete source:
 
     EDINET yuho XBRL → J-Quants FY summary → Yahoo annual timeseries → overlay.
 
-    Complete means book, shares, and 3 beginning-book ROE years. A partial
-    higher-tier cache does not block a complete lower-tier cache. Sources are
-    not mixed inside one name. If nothing is complete, the first partial is
-    kept. Missing stays missing. Cache only.
+    Complete prices means a last close and at least two aligned market returns.
+    Complete fundamentals means book, shares, and 3 beginning-book ROE years.
+    A partial higher-tier cache does not block a complete lower-tier cache.
+    Sources are not mixed inside one name. If nothing is complete, the first
+    partial is kept. Missing stays missing. Cache only.
     """
     universe = load_universe(universe_path)
     overlay_map = load_fundamentals(fundamentals_path)
@@ -519,6 +619,7 @@ def load_auto_snapshot(
     raw_dir = raw_dir or (ROOT / "data" / "raw" / "yahoo")
     fundamentals_dir = fundamentals_dir or (ROOT / "data" / "raw" / "yahoo_fundamentals")
     jquants_dir = jquants_dir or (ROOT / "data" / "raw" / "jquants")
+    jquants_bars_dir = jquants_bars_dir or (ROOT / "data" / "raw" / "jquants_bars")
     edinet_dir = edinet_dir or (ROOT / "data" / "raw" / "edinet_xbrl")
 
     def load_chart(symbol: str) -> dict[str, Any]:
@@ -526,29 +627,36 @@ def load_auto_snapshot(
             return fetch_yahoo_chart_json(symbol, range_=lookback, fetcher=fetcher)
         return _payload_from_raw(raw_dir, symbol)
 
+    def load_bars(code: str) -> dict[str, Any]:
+        return _payload_from_raw(jquants_bars_dir, code)
+
     market_series = parse_yahoo_chart(load_chart(market_symbol), expected_symbol=market_symbol)
     stocks: list[dict[str, Any]] = []
     as_of_dates: list[str] = []
     used_sources: set[str] = set()
+    used_price_sources: set[str] = set()
     used_overlay = False
 
     for item in universe["stocks"]:
         ticker = str(item["ticker"])
         yahoo_symbol = str(item["yahooSymbol"])
         stock = _blank_stock(ticker, str(item["companyName"]))
-        _apply_yahoo_prices(
+        jq_code = jquants_code(item)
+        _apply_price_waterfall(
             stock,
+            jq_code=jq_code,
             yahoo_symbol=yahoo_symbol,
+            load_bars=load_bars,
             load_chart=load_chart,
             market_series=market_series,
             as_of_dates=as_of_dates,
+            used_price_sources=used_price_sources,
         )
         chosen_label: str | None = None
         chosen_fundamentals = None
         fallback_label: str | None = None
         fallback_fundamentals = None
         edinet_code = edinet_sec_code(item)
-        jq_code = jquants_code(item)
 
         def take(label: str, fundamentals) -> None:
             nonlocal chosen_label, chosen_fundamentals, fallback_label, fallback_fundamentals
@@ -599,19 +707,21 @@ def load_auto_snapshot(
     return DataSnapshot(
         source="auto",
         source_label="Auto Data Provider",
-        price_source="yahoo_chart",
+        price_source=_price_source_label(used_price_sources),
         fundamentals_source=_fundamentals_source_label(used_sources, used_overlay),
         market_symbol=market_symbol,
         as_of_date=as_of,
         disclaimer_ja=(
-            "価格は Yahoo Finance chart。財務は銘柄ごとに EDINET XBRL、"
-            "J-Quants、Yahoo timeseries の順で最初に揃ったソースです。"
-            "欠損は 0 にしません。投資助言ではありません。"
+            "価格は銘柄ごとに J-Quants 日足 AdjC、なければ Yahoo chart。"
+            "市場は Yahoo 日経平均。財務は EDINET XBRL、J-Quants、Yahoo timeseries "
+            "の順で最初に揃ったソースです。欠損は 0 にしません。投資助言ではありません。"
         ),
         disclaimer_en=(
-            "Prices from Yahoo Finance chart. Fundamentals use the first complete "
-            "source per name: EDINET XBRL, then J-Quants, then Yahoo timeseries. "
-            "Missing values are not replaced with 0. Not investment advice."
+            "Prices use the first complete series per name: J-Quants daily AdjC, "
+            "then Yahoo chart. Market is Yahoo Nikkei 225. Fundamentals use the "
+            "first complete source per name: EDINET XBRL, then J-Quants, then "
+            "Yahoo timeseries. Missing values are not replaced with 0. "
+            "Not investment advice."
         ),
         assumptions={
             "riskFreeRate": float(universe["riskFreeRate"]),

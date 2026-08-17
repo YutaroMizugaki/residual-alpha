@@ -23,15 +23,17 @@ export default async function HomePage() {
           key, no yfinance package)
         </li>
         <li>
-          J-Quants source can replace those fundamentals with FY summary rows
-          when <code>JQUANTS_API_KEY</code> is set for a live fetch
+          J-Quants source can load daily AdjC bars and FY summary rows when
+          <code>JQUANTS_API_KEY</code> is set for a live fetch. Market stays
+          Yahoo Nikkei 225.
         </li>
         <li>
           EDINET source can parse yuho XBRL (book, profit, shares) from cached
           zips; live download needs <code>EDINET_API_KEY</code>
         </li>
         <li>
-          Auto source picks the first complete fundamentals cache per name
+          Auto source picks the first complete price series (J-Quants AdjC,
+          then Yahoo) and the first complete fundamentals cache per name
           (EDINET, then J-Quants, then Yahoo). Operator refresh is
           <code>scripts/refresh_public_data.py</code>; there is no scheduled
           GitHub Actions cron

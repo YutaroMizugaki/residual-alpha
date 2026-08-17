@@ -47,6 +47,10 @@ def main() -> int:
         default=str(ROOT / "data" / "raw" / "yahoo_fundamentals"),
     )
     parser.add_argument("--jquants-dir", default=str(ROOT / "data" / "raw" / "jquants"))
+    parser.add_argument(
+        "--jquants-bars-dir",
+        default=str(ROOT / "data" / "raw" / "jquants_bars"),
+    )
     parser.add_argument("--edinet-dir", default=str(ROOT / "data" / "raw" / "edinet_xbrl"))
     parser.add_argument(
         "--fetch",
@@ -70,6 +74,7 @@ def main() -> int:
         snapshot = load_jquants_snapshot(
             raw_dir=Path(args.raw_dir),
             jquants_dir=Path(args.jquants_dir),
+            jquants_bars_dir=Path(args.jquants_bars_dir),
             fetch=args.fetch,
         )
     elif args.source == "edinet":
@@ -82,6 +87,7 @@ def main() -> int:
             raw_dir=Path(args.raw_dir),
             fundamentals_dir=Path(args.fundamentals_dir),
             jquants_dir=Path(args.jquants_dir),
+            jquants_bars_dir=Path(args.jquants_bars_dir),
             edinet_dir=Path(args.edinet_dir),
         )
 

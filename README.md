@@ -2,7 +2,7 @@
 
 Residual-income ranking. Python computes valuation; Next.js displays static JSON.
 
-**Current status:** Fixture MVP + Free Data Provider (Yahoo) + keyed J-Quants FY summaries + EDINET yuho XBRL + `--source auto` fallback and a 10-name listed universe.
+**Current status:** Fixture MVP + Free Data Provider (Yahoo) + keyed J-Quants FY summaries and daily AdjC bars + EDINET yuho XBRL + `--source auto` fallback and a 10-name listed universe.
 
 Displayed data follows `public/data/meta.json`. The committed site is fixture data (fictional tickers). Free, J-Quants, EDINET, and auto sources are opt-in and not used by CI. There is no GitHub Actions cron.
 
@@ -58,8 +58,8 @@ python scripts/fetch_jquants_data.py
 python scripts/build_public_data.py --source jquants
 ```
 
-Prices still come from cached Yahoo charts. Fundamentals come from J-Quants
-FY summary rows.
+Prices prefer cached J-Quants daily AdjC, then Yahoo chart. Market stays
+Yahoo Nikkei 225. Fundamentals come from J-Quants FY summary rows.
 
 ```bash
 # document list (needs EDINET_API_KEY)
@@ -78,10 +78,10 @@ python scripts/build_public_data.py --source edinet
 
 ## Auto source + operator refresh (optional, not CI)
 
-`--source auto` uses cached files only. Fundamentals per name: first complete
-source among EDINET XBRL, J-Quants FY summary, then Yahoo timeseries. Sources
-are not mixed inside one name. Extra universe names without cache stay
-ineligible.
+`--source auto` uses cached files only. Prices per name: J-Quants daily AdjC,
+then Yahoo chart. Fundamentals per name: first complete source among EDINET
+XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
+inside one name. Extra universe names without cache stay ineligible.
 
 ```bash
 python scripts/refresh_public_data.py --dry-run

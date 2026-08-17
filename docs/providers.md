@@ -16,15 +16,22 @@ Provider snapshot
 | --- | --- | --- | --- | --- |
 | `fixture` | fictional JSON | fictional JSON | no | yes (CI) |
 | `free` | Yahoo Finance chart JSON | Yahoo annual timeseries | no | no |
-| `jquants` | Yahoo Finance chart JSON | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch | no |
+| `jquants` | J-Quants daily AdjC, else Yahoo chart | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch | no |
 | `edinet` | Yahoo Finance chart JSON | EDINET yuho XBRL instance | `EDINET_API_KEY` to download zips | no |
-| `auto` | Yahoo Finance chart JSON | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
+| `auto` | first complete series per name: J-Quants daily AdjC → Yahoo chart | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
 
 Yahoo timeseries fields (free source):
 
 - `annualStockholdersEquity` → book value (JPY → million JPY)
 - `annualNetIncomeCommonStockholders` → net income
 - `annualOrdinarySharesNumber` → shares (count → million shares)
+
+J-Quants daily bars (jquants / auto prices):
+
+- `AdjC` → split-adjusted close (JPY per share)
+- Empty / null `AdjC` is missing, not 0. Unadjusted `C` is not used.
+- No-trade days stay missing. Market for beta remains Yahoo Nikkei 225;
+  J-Quants does not publish Nikkei OHLC.
 
 J-Quants FY fields (jquants source):
 
@@ -68,6 +75,7 @@ python scripts/fetch_free_data.py
 python scripts/build_public_data.py --source free
 
 # J-Quants FY summaries (network; needs JQUANTS_API_KEY; not run in CI)
+# also downloads /equities/bars/daily into data/raw/jquants_bars
 python scripts/fetch_jquants_data.py
 python scripts/build_public_data.py --source jquants
 
@@ -82,10 +90,11 @@ python scripts/refresh_public_data.py --source auto
 ```
 
 `--source auto` is cache-only. Per name it takes the first **complete**
-fundamentals source (book, shares, and 3 beginning-book ROE years) and does
-not mix EDINET, J-Quants, and Yahoo inside one issuer. A partial higher-tier
-cache does not block a complete lower-tier cache. If nothing is complete, the
-first partial is kept. Names without a cached chart or financials stay
+price series (J-Quants daily AdjC, then Yahoo chart) and the first
+**complete** fundamentals source (book, shares, and 3 beginning-book ROE
+years). It does not mix sources inside one issuer. A partial higher-tier
+cache does not block a complete lower-tier cache. If nothing is complete,
+the first partial is kept. Names without a cached chart or financials stay
 ranking-ineligible; missing is not 0.
 
 `refresh_public_data.py --source free` fetches only Yahoo even if keyed env

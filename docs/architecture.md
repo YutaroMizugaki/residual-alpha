@@ -20,9 +20,11 @@ Provider snapshot
 TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or scores.
 
 Default provider is **fixture** (fictional issuers). Optional **free**,
-**jquants**, **edinet**, and **auto** providers keep Yahoo prices. **auto**
-picks the first complete fundamentals source per name (EDINET XBRL, then
-J-Quants FY, then Yahoo timeseries). See `docs/providers.md`.
+**jquants**, **edinet**, and **auto** providers. **jquants** / **auto**
+prices prefer J-Quants daily AdjC, then Yahoo chart. Market stays Yahoo
+Nikkei 225. **auto** picks the first complete fundamentals source per name
+(EDINET XBRL, then J-Quants FY, then Yahoo timeseries). See
+`docs/providers.md`.
 
 ## What this phase does not include
 
@@ -41,12 +43,12 @@ No trading
 ## Layout
 
 - `scripts/models/` — valuation math
-- `scripts/providers/` — fixture, Yahoo, J-Quants summary, EDINET list + XBRL
+- `scripts/providers/` — fixture, Yahoo, J-Quants summary + daily bars, EDINET list + XBRL
 - `scripts/fixtures/stocks.json` — fictional inputs
 - `scripts/build_public_data.py` — writes `public/data/`
 - `scripts/refresh_public_data.py` — optional operator fetch + rebuild (no cron)
 - `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
-- `scripts/fetch_jquants_data.py` — optional J-Quants FY summary download
+- `scripts/fetch_jquants_data.py` — optional J-Quants FY summary + daily bars download
 - `scripts/fetch_edinet_list.py` — optional EDINET document list
 - `scripts/fetch_edinet_xbrl.py` — optional EDINET yuho XBRL zip download
 - `scripts/providers/universe.json` — 10 listed names for non-fixture sources
