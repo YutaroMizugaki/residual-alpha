@@ -211,6 +211,10 @@ def test_jquants_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["9984"]["eligible"] is True
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
     assert set(ranked) == {"7203", "6758", "9984"}
+    assert by_ticker["6861"]["eligible"] is False
+    assert by_ticker["6861"]["price"] is not None
+    assert by_ticker["6861"]["price"] != 0
+    assert by_ticker["6861"]["bookValue"] is None
 
 
 def test_jquants_without_summaries_stays_ineligible(tmp_path: Path):

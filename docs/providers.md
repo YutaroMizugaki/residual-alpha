@@ -106,8 +106,10 @@ script. It does not crawl EDINET filing dates. Run
 `fetch_edinet_list.py --date YYYY-MM-DD` first if you need new yuho zips.
 
 The listed-name universe in `scripts/providers/universe.json` has 10 tickers.
-Recorded tests cover Toyota, Sony, and SoftBank. Extra names without cache
-remain ineligible until an operator fetches them.
+Recorded Yahoo chart and annual timeseries cover all 10. J-Quants summaries,
+daily bars, and EDINET XBRL still cover Toyota, Sony, and SoftBank. Names
+without a keyed cache fall through to Yahoo in `--source auto`, or stay
+ranking-ineligible on `--source jquants` / `--source edinet`. Missing is not 0.
 
 Do not commit API keys. `.env*` is gitignored. Do not commit live
 `public/data` from `--source auto` / `free` / `jquants` / `edinet`; CI rebuilds

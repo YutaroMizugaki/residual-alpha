@@ -18,6 +18,19 @@ UNIVERSE_PATH = ROOT / "scripts" / "providers" / "universe.json"
 
 TOYOTA_BOOK = 39_918_854.0
 CORE = {"7203", "6758", "9984"}
+TICKERS = [
+    "7203",
+    "6758",
+    "9984",
+    "6861",
+    "6501",
+    "8035",
+    "4063",
+    "8306",
+    "9432",
+    "6098",
+]
+EXTRAS = [ticker for ticker in TICKERS if ticker not in CORE]
 POISON_BOOK = 1.0
 
 
@@ -288,21 +301,10 @@ def test_auto_does_not_mix_sources_inside_one_name(tmp_path: Path):
     assert snapshot.fundamentals_source == "edinet_xbrl"
 
 
-def test_expanded_universe_extra_names_stay_ineligible(tmp_path: Path):
+def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
     universe = load_universe(UNIVERSE_PATH)
     tickers = [str(item["ticker"]) for item in universe["stocks"]]
-    assert tickers == [
-        "7203",
-        "6758",
-        "9984",
-        "6861",
-        "6501",
-        "8035",
-        "4063",
-        "8306",
-        "9432",
-        "6098",
-    ]
+    assert tickers == TICKERS
     snapshot = load_auto_snapshot(
         raw_dir=YAHOO_DIR,
         fundamentals_dir=FUND_DIR,
@@ -315,6 +317,43 @@ def test_expanded_universe_extra_names_stay_ineligible(tmp_path: Path):
     extras = [row for row in snapshot.stocks if row["ticker"] not in CORE]
     assert len(extras) == 7
     for stock in extras:
+        assert stock["price"] is not None
+        assert stock["price"] != 0
+        assert stock["bookValue"] is not None
+        assert stock["bookValue"] != 0
+        assert stock["latestRoe"] is not None
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
+    by_ticker = {row["ticker"]: row for row in computed}
+    ranked = [row["ticker"] for row in computed if row["rank"] is not None]
+    assert set(ranked) == set(TICKERS)
+    for ticker in TICKERS:
+        assert by_ticker[ticker]["eligible"] is True
+        assert by_ticker[ticker]["bookValue"] is not None
+        assert by_ticker[ticker]["price"] is not None
+    assert by_ticker["6758"]["latestRoe"] < 0
+    assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
+    assert by_ticker["9432"]["price"] == pytest.approx(161.5)
+    assert "edinet_xbrl" in snapshot.fundamentals_source
+    assert "yahoo_timeseries" in snapshot.fundamentals_source
+
+
+def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
+    yahoo_dir = tmp_path / "yahoo"
+    fund_dir = tmp_path / "fund"
+    for name in ("_N225.json", "7203.T.json", "6758.T.json", "9984.T.json"):
+        _copy_tree(YAHOO_DIR / name, yahoo_dir / name)
+    for name in ("7203.T.json", "6758.T.json", "9984.T.json"):
+        _copy_tree(FUND_DIR / name, fund_dir / name)
+    snapshot = load_auto_snapshot(
+        raw_dir=yahoo_dir,
+        fundamentals_dir=fund_dir,
+        jquants_dir=tmp_path / "no-jquants",
+        edinet_dir=tmp_path / "no-edinet",
+        fundamentals_path=tmp_path / "empty.json",
+    )
+    extras = [row for row in snapshot.stocks if row["ticker"] not in CORE]
+    assert len(extras) == 7
+    for stock in extras:
         assert stock["price"] is None
         assert stock["bookValue"] is None
         assert stock["sharesOutstanding"] is None
@@ -323,10 +362,7 @@ def test_expanded_universe_extra_names_stay_ineligible(tmp_path: Path):
     by_ticker = {row["ticker"]: row for row in computed}
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
     assert set(ranked) == CORE
-    for ticker in tickers:
-        if ticker in CORE:
-            assert by_ticker[ticker]["eligible"] is True
-            continue
+    for ticker in EXTRAS:
         assert by_ticker[ticker]["eligible"] is False
         assert by_ticker[ticker]["bookValue"] is None
         assert by_ticker[ticker]["price"] is None
@@ -380,26 +416,34 @@ def test_auto_keeps_partial_when_no_complete_source(tmp_path: Path):
     assert "missing_roe" in ranked["exclusionReasons"]
 
 
-def test_extra_names_do_not_change_core_scores(tmp_path: Path):
+def test_ineligible_extra_prices_do_not_change_core_scores(tmp_path: Path):
     overlay = tmp_path / "empty.json"
+    fund_dir = tmp_path / "fund"
+    for name in ("7203.T.json", "6758.T.json", "9984.T.json"):
+        _copy_tree(FUND_DIR / name, fund_dir / name)
     three = load_auto_snapshot(
         universe_path=_mini_universe(
             tmp_path / "universe.json",
             [("7203", "Toyota Motor"), ("6758", "Sony Group"), ("9984", "SoftBank Group")],
         ),
         raw_dir=YAHOO_DIR,
-        fundamentals_dir=FUND_DIR,
+        fundamentals_dir=fund_dir,
         jquants_dir=JQUANTS_DIR,
         edinet_dir=XBRL_DIR,
         fundamentals_path=overlay,
     )
     ten = load_auto_snapshot(
         raw_dir=YAHOO_DIR,
-        fundamentals_dir=FUND_DIR,
+        fundamentals_dir=fund_dir,
         jquants_dir=JQUANTS_DIR,
         edinet_dir=XBRL_DIR,
         fundamentals_path=overlay,
     )
+    extras = [row for row in ten.stocks if row["ticker"] not in CORE]
+    for stock in extras:
+        assert stock["price"] is not None
+        assert stock["price"] != 0
+        assert stock["bookValue"] is None
     three_eval = {
         row["ticker"]: row for row in evaluate_universe(three.stocks, three.assumptions)
     }
@@ -407,3 +451,5 @@ def test_extra_names_do_not_change_core_scores(tmp_path: Path):
     for ticker in CORE:
         assert three_eval[ticker]["totalScore"] == pytest.approx(ten_eval[ticker]["totalScore"])
         assert three_eval[ticker]["rank"] == ten_eval[ticker]["rank"]
+    ranked = [row["ticker"] for row in ten_eval.values() if row["rank"] is not None]
+    assert set(ranked) == CORE

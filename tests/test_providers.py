@@ -188,6 +188,17 @@ def test_yahoo_fundamentals_toyota_units_and_beginning_roe():
     assert fundamentals.roe_history[-1] == pytest.approx(expected_latest)
 
 
+def test_yahoo_fundamentals_extra_universe_name_has_three_roes():
+    payload = json.loads((FUND_DIR / "6861.T.json").read_text(encoding="utf-8"))
+    fundamentals = parse_yahoo_fundamentals(payload)
+    assert fundamentals.book_value is not None
+    assert fundamentals.book_value != 0
+    assert fundamentals.shares_outstanding is not None
+    assert fundamentals.roe_history is not None
+    assert len(fundamentals.roe_history) == 3
+    assert fundamentals.fiscal_year_end == "2026-03-31"
+
+
 def test_yahoo_fundamentals_missing_year_not_zero():
     payload = json.loads((FUND_DIR / "missing_year.json").read_text(encoding="utf-8"))
     fundamentals = parse_yahoo_fundamentals(payload)
@@ -233,8 +244,23 @@ def test_free_snapshot_with_recorded_fundamentals_ranks(tmp_path: Path):
     softbank = by_ticker["9984"]
     assert softbank["eligible"] is True
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
-    assert set(ranked) == {"7203", "6758", "9984"}
+    assert set(ranked) == {
+        "7203",
+        "6758",
+        "9984",
+        "6861",
+        "6501",
+        "8035",
+        "4063",
+        "8306",
+        "9432",
+        "6098",
+    }
     assert toyota["fundamentalsAsOf"] == "2026-03-31"
+    assert by_ticker["6861"]["eligible"] is True
+    assert by_ticker["6861"]["price"] == pytest.approx(86750.0)
+    assert by_ticker["9432"]["price"] == pytest.approx(161.5)
+    assert by_ticker["6861"]["bookValue"] != 0
 
 
 def test_overlay_does_not_overwrite_yahoo_fundamentals(tmp_path: Path):

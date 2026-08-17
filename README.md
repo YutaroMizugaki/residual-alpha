@@ -81,7 +81,7 @@ python scripts/build_public_data.py --source edinet
 `--source auto` uses cached files only. Prices per name: J-Quants daily AdjC,
 then Yahoo chart. Fundamentals per name: first complete source among EDINET
 XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
-inside one name. Extra universe names without cache stay ineligible.
+inside one name. Recorded Yahoo caches cover all 10 universe names.
 
 ```bash
 python scripts/refresh_public_data.py --dry-run
