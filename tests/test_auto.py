@@ -349,10 +349,12 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         assert by_ticker[ticker]["price"] is not None
         assert by_ticker[ticker]["priceSource"] == "yahoo_chart"
         assert by_ticker[ticker]["returnCount"] >= 199
+        assert by_ticker[ticker]["roeCount"] >= 3
         assert by_ticker[ticker]["priceAsOf"] is not None
         listed = ranking_row(by_ticker[ticker])
         assert listed["priceAsOf"] == by_ticker[ticker]["priceAsOf"]
         assert listed["fundamentalsAsOf"] == by_ticker[ticker]["fundamentalsAsOf"]
+        assert listed["roeCount"] == by_ticker[ticker]["roeCount"]
         assert listed["priceAsOf"] is not None
         assert listed["fundamentalsAsOf"] is not None
     for ticker in CORE:
@@ -401,6 +403,7 @@ def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
         assert listed["priceSource"] is None
         assert listed["fundamentalsSource"] is None
         assert listed["returnCount"] is None
+        assert listed["roeCount"] is None
         assert listed["priceAsOf"] is None
         assert listed["fundamentalsAsOf"] is None
         assert "missing_book_value" in by_ticker[ticker]["exclusionReasons"]

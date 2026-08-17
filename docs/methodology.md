@@ -41,7 +41,7 @@ roe_3y_median = median(last 3 years)
 normalized_roe = 0.6 × latest_roe + 0.4 × roe_3y_median
 ```
 
-Clip to `[-0.20, 0.40]`. Shorter history is `insufficient_history`, not filled with zeros.
+Clip to `[-0.20, 0.40]`. Shorter history is `insufficient_history`, not filled with zeros. `roeCount` is `len(roe_history)` as passed to the engine. Missing history stays missing (`null`), not `0`, and is not padded.
 
 ## ROE Fade
 

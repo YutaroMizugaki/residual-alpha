@@ -16,6 +16,7 @@
   "latestRoe": null,
   "normalizedRoe": null,
   "normalizedRoeStatus": "missing",
+  "roeCount": null,
   "excessRoe": null,
   "bookValue": null,
   "sharesOutstanding": null,

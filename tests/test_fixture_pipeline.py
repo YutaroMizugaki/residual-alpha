@@ -25,6 +25,7 @@ RANKING_FIELDS = [
     "returnCount",
     "costOfEquity",
     "normalizedRoe",
+    "roeCount",
     "excessRoe",
     "valuationScore",
     "qualityScore",
@@ -76,6 +77,7 @@ def test_fixture_missing_data_not_zero():
     assert missing["normalizedRoe"] is None
     assert missing["totalScore"] is None
     assert missing["returnCount"] is None
+    assert missing["roeCount"] is None
     assert "missing_book_value" in missing["exclusionReasons"]
     assert 0 not in (
         missing["bookValue"],
@@ -84,6 +86,7 @@ def test_fixture_missing_data_not_zero():
         missing["normalizedRoe"],
         missing["totalScore"],
         missing["returnCount"],
+        missing["roeCount"],
     )
 
 
@@ -131,8 +134,10 @@ def test_public_json_matches_engine_and_schema():
         assert row["fundamentalsAsOf"] is None
         if row["ticker"] == "1006":
             assert row["returnCount"] is None
+            assert row["roeCount"] is None
         else:
             assert row["returnCount"] == 24
+            assert row["roeCount"] == 3
 
     for row in universe:
         public_detail = json.loads((STOCKS_DIR / f"{row['ticker']}.json").read_text(encoding="utf-8"))
@@ -144,6 +149,10 @@ def test_public_json_matches_engine_and_schema():
         assert "fundamentalsSource" in public_detail
         assert public_detail["priceSource"] == "fixture"
         assert public_detail["fundamentalsSource"] == "fixture"
+        if row["ticker"] == "1006":
+            assert public_detail["roeCount"] is None
+        else:
+            assert public_detail["roeCount"] == 3
 
     meta = json.loads((ROOT / "public" / "data" / "meta.json").read_text(encoding="utf-8"))
     assert meta["source"] == "fixture"
@@ -181,3 +190,17 @@ def test_evaluate_stock_passes_per_name_sources():
     assert blank["fundamentalsSource"] is None
     assert blank["priceAsOf"] is None
     assert blank["fundamentalsAsOf"] is None
+
+
+def test_short_roe_history_count_is_not_padded():
+    fixtures = _load_fixture()
+    stock = dict(fixtures["stocks"][0])
+    stock["roeHistory"] = [0.16, 0.18]
+    row = evaluate_universe([stock], fixtures["assumptions"])[0]
+    assert row["roeCount"] == 2
+    assert row["normalizedRoe"] is None
+    assert "insufficient_roe_history" in row["exclusionReasons"]
+    detail = detail_row(row)
+    ranked = ranking_row(row)
+    assert detail["roeCount"] == 2
+    assert ranked["roeCount"] == 2

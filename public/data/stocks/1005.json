@@ -16,6 +16,7 @@
   "latestRoe": 0.03,
   "normalizedRoe": 0.03,
   "normalizedRoeStatus": "valid",
+  "roeCount": 3,
   "excessRoe": -0.03835,
   "bookValue": 100000.0,
   "sharesOutstanding": 100.0,

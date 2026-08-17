@@ -99,8 +99,10 @@ without a cached chart or financials stay ranking-ineligible; missing is not 0.
 
 Each stock row carries its own `priceSource` and `fundamentalsSource` in
 both ranking JSON and stock detail JSON. Ranking JSON also carries
-`returnCount`, `priceAsOf` (last close date), and `fundamentalsAsOf`
-(fiscal year-end). Missing dates stay missing (`null`), not `0`.
+`returnCount`, `roeCount` (ROE history years used for normalized ROE),
+`priceAsOf` (last close date), and `fundamentalsAsOf` (fiscal year-end).
+Missing dates and counts stay missing (`null`), not `0`. Do not pad short
+ROE history.
 Universe `meta.json` stays the union across names (`jquants_bars+yahoo_chart`
 when auto mixes). The stock page reads the per-name labels, not the mix.
 Missing sources stay missing (`null`), not `0` and not another name's source.

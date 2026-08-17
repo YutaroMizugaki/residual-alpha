@@ -12,6 +12,7 @@ export type RankingRow = {
   returnCount?: number | null;
   costOfEquity: number | null;
   normalizedRoe: number | null;
+  roeCount?: number | null;
   excessRoe: number | null;
   valuationScore: number | null;
   qualityScore: number | null;
@@ -55,6 +56,7 @@ export type StockDetail = {
   latestRoe: number | null;
   normalizedRoe: number | null;
   normalizedRoeStatus: string;
+  roeCount?: number | null;
   excessRoe: number | null;
   bookValue: number | null;
   sharesOutstanding: number | null;

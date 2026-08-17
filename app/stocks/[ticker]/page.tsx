@@ -115,7 +115,13 @@ export default async function StockPage({ params }: PageProps) {
         <MetricCard
           label="Normalized ROE"
           value={formatPercent(stock.normalizedRoe)}
-          hint={`latest ${formatPercent(stock.latestRoe)} · ${stock.normalizedRoeStatus}`}
+          hint={[
+            `latest ${formatPercent(stock.latestRoe)}`,
+            stock.normalizedRoeStatus,
+            stock.roeCount != null ? `${stock.roeCount} years` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         />
         <MetricCard
           label="Excess ROE"

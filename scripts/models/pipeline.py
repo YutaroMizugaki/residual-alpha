@@ -100,6 +100,7 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
     price_source = optional_source_label(stock.get("priceSource"))
     fundamentals_source = optional_source_label(stock.get("fundamentalsSource"))
     return_count = None if stock_returns is None else len(stock_returns)
+    roe_count = None if roe_history is None else len(roe_history)
 
     beta_raw = None
     beta_adjusted = None
@@ -223,6 +224,7 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
         "latestRoe": latest_roe,
         "normalizedRoe": normalized_roe,
         "normalizedRoeStatus": normalized_roe_status,
+        "roeCount": roe_count,
         "excessRoe": excess_roe,
         "earningsYield": earnings_yield,
         "pbDiscount": pb_discount,
@@ -267,6 +269,7 @@ def ranking_row(stock: dict) -> dict:
         "returnCount": stock.get("returnCount"),
         "costOfEquity": _round(stock["costOfEquity"], 8),
         "normalizedRoe": _round(stock["normalizedRoe"], 8),
+        "roeCount": stock.get("roeCount"),
         "excessRoe": _round(stock["excessRoe"], 8),
         "valuationScore": _round(stock["valuationScore"], 2),
         "qualityScore": _round(stock["qualityScore"], 2),
@@ -319,6 +322,7 @@ def detail_row(stock: dict) -> dict:
         "latestRoe": _round(stock["latestRoe"], 8),
         "normalizedRoe": _round(stock["normalizedRoe"], 8),
         "normalizedRoeStatus": stock["normalizedRoeStatus"],
+        "roeCount": stock.get("roeCount"),
         "excessRoe": _round(stock["excessRoe"], 8),
         "bookValue": _round(stock["bookValue"], 6),
         "sharesOutstanding": _round(stock["sharesOutstanding"], 6),

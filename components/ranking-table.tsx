@@ -144,6 +144,11 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
                         FY {row.fundamentalsAsOf}
                       </span>
                     ) : null}
+                    {row.roeCount != null ? (
+                      <span className="block text-xs font-normal text-slate-500">
+                        {row.roeCount} yr
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatPercent(row.excessRoe, { signed: true })}
