@@ -7,7 +7,13 @@ from pathlib import Path
 import pytest
 
 from models.pipeline import evaluate_universe
-from providers.edinet_xbrl import parse_edinet_instance_xml, parse_edinet_xbrl_dir, parse_edinet_xbrl_zip
+from providers.edinet_xbrl import (
+    compact_edinet_xbrl_dir,
+    context_is_breakdown,
+    parse_edinet_instance_xml,
+    parse_edinet_xbrl_dir,
+    parse_edinet_xbrl_zip,
+)
 from providers.errors import BotWallError, FetchError
 from providers.http import edinet_xbrl_url, fetch_edinet_xbrl_zip, redact_url
 from providers.loader import load_edinet_snapshot
@@ -226,15 +232,27 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["9984"]["eligible"] is True
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
-    assert set(ranked) == {"7203", "6758", "9984"}
+    assert set(ranked) == {
+        "7203",
+        "6758",
+        "9984",
+        "6861",
+        "6501",
+        "8035",
+        "4063",
+        "8306",
+        "9432",
+        "6098",
+    }
     assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert toyota["priceSource"] == "yahoo_chart"
-    assert by_ticker["6861"]["eligible"] is False
+    assert by_ticker["6861"]["eligible"] is True
     assert by_ticker["6861"]["price"] is not None
     assert by_ticker["6861"]["price"] != 0
-    assert by_ticker["6861"]["bookValue"] is None
+    assert by_ticker["6861"]["bookValue"] == pytest.approx(3_413_911.0)
+    assert by_ticker["6861"]["fundamentalsAsOf"] == "2026-03-20"
     assert by_ticker["6861"]["priceSource"] == "yahoo_chart"
-    assert by_ticker["6861"]["fundamentalsSource"] is None
+    assert by_ticker["6861"]["fundamentalsSource"] == "edinet_xbrl"
 
 
 def test_edinet_without_xbrl_stays_ineligible(tmp_path: Path):
@@ -262,3 +280,149 @@ def test_parse_edinet_xbrl_dir_merges_files(tmp_path: Path):
     assert fundamentals.roe_history is not None
     assert len(fundamentals.roe_history) == 3
     assert fundamentals.book_value == pytest.approx(39_918_854.0)
+
+
+def test_context_is_breakdown_skips_line_items_not_consolidation():
+    assert context_is_breakdown("CurrentYearInstant") is False
+    assert context_is_breakdown("CurrentYearInstant_NonConsolidatedMember") is False
+    assert context_is_breakdown("Prior2YearInstant_CapitalStockMember") is True
+    assert context_is_breakdown("CurrentYearInstant_Row1Member") is True
+    assert context_is_breakdown("Prior2YearInstant_NonConsolidatedMember_CapitalStockMember") is True
+
+
+def test_edinet_xbrl_ignores_capital_stock_member_net_assets():
+    extra = """
+  <xbrli:context id="CurrentYearInstant_CapitalStockMember">
+    <xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2026-03-31</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <jpigp:NetAssets contextRef="CurrentYearInstant_CapitalStockMember" unitRef="JPY" decimals="-6">1</jpigp:NetAssets>
+"""
+    xml = make_ifrs_xbrl(TOYOTA_ROWS, extra=extra)
+    fundamentals = parse_edinet_instance_xml(xml)
+    assert fundamentals.book_value == pytest.approx(39_918_854.0)
+    assert fundamentals.latest_roe == pytest.approx(3_848_098_000_000.0 / 35_924_826_000_000.0)
+
+
+def test_edinet_xbrl_treasury_shares_etc_counts_as_treasury():
+    xml = make_ifrs_xbrl(TOYOTA_ROWS[:1])
+    xml = xml.replace(
+        '<jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI contextRef="CurrentYearInstant" unitRef="Shares" decimals="0">0</jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI>',
+        '<jpcrp:TotalNumberOfSharesHeldTreasurySharesEtc contextRef="CurrentYearInstant" unitRef="Shares" decimals="0">1000000</jpcrp:TotalNumberOfSharesHeldTreasurySharesEtc>',
+    )
+    xml = xml.replace(
+        "xmlns:jpdei=",
+        'xmlns:jpcrp="http://disclosure.edinet-fsa.go.jp/taxonomy/jpcrp/2025-11-01/jpcrp_cor" xmlns:jpdei=',
+    )
+    fundamentals = parse_edinet_instance_xml(xml)
+    assert fundamentals.shares_outstanding == pytest.approx((13_033_384_474 - 1_000_000) / 1_000_000)
+
+
+def test_edinet_xbrl_filing_date_issued_shares_map_to_current_year():
+    xml = make_ifrs_xbrl(TOYOTA_ROWS[:1])
+    xml = xml.replace(
+        '<jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI contextRef="CurrentYearInstant" unitRef="Shares" decimals="0">13033384474</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>',
+        """  <xbrli:context id="FilingDateInstant">
+    <xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2026-06-15</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <jpcrp:NumberOfIssuedSharesAsOfFiscalYearEndIssuedSharesTotalNumberOfSharesEtc contextRef="FilingDateInstant" unitRef="Shares" decimals="0">13033384474</jpcrp:NumberOfIssuedSharesAsOfFiscalYearEndIssuedSharesTotalNumberOfSharesEtc>""",
+    )
+    xml = xml.replace(
+        "xmlns:jpdei=",
+        'xmlns:jpcrp="http://disclosure.edinet-fsa.go.jp/taxonomy/jpcrp/2025-11-01/jpcrp_cor" xmlns:jpdei=',
+    )
+    fundamentals = parse_edinet_instance_xml(xml)
+    assert fundamentals.shares_outstanding == pytest.approx(13_033.384474)
+    assert fundamentals.fiscal_year_end == "2026-03-31"
+
+
+def test_compact_edinet_roundtrips_toyota_fixture():
+    xml = compact_edinet_xbrl_dir(XBRL_DIR / "72030")
+    original = parse_edinet_xbrl_dir(XBRL_DIR / "72030")
+    compact = parse_edinet_instance_xml(xml)
+    assert compact.book_value == pytest.approx(original.book_value)
+    assert compact.shares_outstanding == pytest.approx(original.shares_outstanding)
+    assert compact.roe_history == original.roe_history
+    assert "PublicDoc" not in xml
+    assert "CapitalStockMember" not in xml
+
+
+def test_compact_edinet_dir_universe_only(tmp_path: Path):
+    from compact_edinet_xbrl import compact_edinet_universe
+
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    (src / "noise").mkdir(parents=True)
+    (src / "noise" / "junk.xbrl").write_text("<not-xbrl>", encoding="utf-8")
+    (src / "72030").mkdir()
+    (src / "72030" / "instance.xbrl").write_text(make_ifrs_xbrl(TOYOTA_ROWS), encoding="utf-8")
+    universe = {
+        "marketSymbol": "^N225",
+        "stocks": [
+            {
+                "ticker": "7203",
+                "yahooSymbol": "7203.T",
+                "edinetSecCode": "72030",
+                "companyName": "Toyota",
+            }
+        ],
+    }
+    assert compact_edinet_universe(src, dst, universe=universe) == 0
+    assert not (dst / "noise").exists()
+    written = (dst / "72030" / "instance.xbrl").read_text(encoding="utf-8")
+    fundamentals = parse_edinet_instance_xml(written)
+    assert fundamentals.book_value == pytest.approx(39_918_854.0)
+    extra = {
+        "marketSymbol": "^N225",
+        "stocks": universe["stocks"]
+        + [
+            {
+                "ticker": "6861",
+                "yahooSymbol": "6861.T",
+                "edinetSecCode": "68610",
+                "companyName": "Keyence",
+            }
+        ],
+    }
+    missing = compact_edinet_universe(src, dst, universe=extra)
+    assert missing == 1
+    existing_only = compact_edinet_universe(src, dst, universe=extra, existing_only=True)
+    assert existing_only == 0
+    assert (dst / "72030" / "instance.xbrl").exists()
+    assert not (dst / "68610" / "instance.xbrl").exists()
+    poison = tmp_path / "poison"
+    (poison / "72030").mkdir(parents=True)
+    (poison / "72030" / "instance.xbrl").write_text(make_ifrs_xbrl(TOYOTA_ROWS[:1]), encoding="utf-8")
+    (poison / "68610").mkdir()
+    (poison / "68610" / "instance.xbrl").write_text(
+        (XBRL_DIR / "68610" / "instance.xbrl").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    keep_dst = tmp_path / "keep"
+    (keep_dst / "72030").mkdir(parents=True)
+    (keep_dst / "72030" / "instance.xbrl").write_text(written, encoding="utf-8")
+    assert compact_edinet_universe(poison, keep_dst, universe=extra, keep_existing=True) == 0
+    kept = parse_edinet_xbrl_dir(keep_dst / "72030")
+    assert kept.book_value == pytest.approx(39_918_854.0)
+    assert kept.roe_history is not None
+    assert len(kept.roe_history) == 3
+    added = parse_edinet_xbrl_dir(keep_dst / "68610")
+    assert added.book_value == pytest.approx(3_413_911.0)
+    already = compact_edinet_universe(poison, keep_dst, universe=extra, keep_existing=True)
+    assert already == 0
+
+
+def test_recorded_extra_edinet_is_complete():
+    extras = ["68610", "65010", "80350", "40630", "83060", "94320", "60980"]
+    for code in extras:
+        fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)
+        assert fundamentals.book_value is not None
+        assert fundamentals.book_value != 0
+        assert fundamentals.shares_outstanding is not None
+        assert fundamentals.shares_outstanding != 0
+        assert fundamentals.latest_roe is not None
+        assert fundamentals.roe_history is not None
+        assert len(fundamentals.roe_history) >= 3
+        assert all(abs(value) < 2 for value in fundamentals.roe_history)
+        assert fundamentals.fiscal_year_end in {"2026-03-31", "2026-03-20"}

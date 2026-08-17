@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import zipfile
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -38,12 +38,23 @@ INCOME_NAMES = (
 ISSUED_SHARE_NAMES = (
     "NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI",
     "NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock",
+    "NumberOfIssuedSharesAsOfFiscalYearEndIssuedSharesTotalNumberOfSharesEtc",
     "TotalNumberOfIssuedSharesSummaryOfBusinessResults",
 )
 TREASURY_SHARE_NAMES = (
     "NumberOfTreasuryStockAtTheEndOfFiscalYearDEI",
     "NumberOfTreasuryStockAtTheEndOfFiscalYear",
+    "TotalNumberOfSharesHeldTreasurySharesEtc",
 )
+YEAR_LABELS = (
+    "CurrentYear",
+    "Prior1Year",
+    "Prior2Year",
+    "Prior3Year",
+    "Prior4Year",
+    "Prior5Year",
+)
+CONSOL_MEMBERS = {"NonConsolidatedMember", "ConsolidatedMember"}
 
 
 @dataclass(frozen=True)
@@ -54,6 +65,7 @@ class _Context:
     end: date | None
     consolidated: bool
     forecast: bool
+    breakdown: bool
 
 
 def local_name(tag: str) -> str:
@@ -85,6 +97,14 @@ def _blob(elem: ET.Element) -> str:
         parts.append(local_name(child.tag))
         parts.append(_text(child))
     return " ".join(parts)
+
+
+def context_is_breakdown(ctx_id: str) -> bool:
+    """Line-item members (capital stock, rows) are not total equity or shares."""
+    parts = ctx_id.split("_")
+    while parts and parts[-1] in CONSOL_MEMBERS:
+        parts.pop()
+    return any(part.endswith("Member") for part in parts)
 
 
 def _parse_contexts(root: ET.Element) -> dict[str, _Context]:
@@ -121,6 +141,7 @@ def _parse_contexts(root: ET.Element) -> dict[str, _Context]:
             end=end,
             consolidated=not noncons,
             forecast=forecast,
+            breakdown=context_is_breakdown(ctx_id),
         )
     return out
 
@@ -163,7 +184,8 @@ def _current_year_end(contexts: dict[str, _Context]) -> date | None:
 
 def _period_for_fact(elem: ET.Element, ctx: _Context, current_end: date | None) -> date | None:
     name = local_name(elem.tag)
-    if name.endswith("DEI") and "FilingDate" in ctx.id:
+    share_concept = name in ISSUED_SHARE_NAMES or name in TREASURY_SHARE_NAMES or name.endswith("DEI")
+    if current_end is not None and share_concept and "FilingDate" in ctx.id:
         return current_end
     if ctx.instant is not None:
         return ctx.instant
@@ -190,7 +212,7 @@ def _pick_named(
         if local not in name_rank:
             continue
         ctx = contexts.get(elem.get("contextRef") or "")
-        if ctx is None or ctx.forecast:
+        if ctx is None or ctx.forecast or ctx.breakdown:
             continue
         if kind == "instant" and ctx.instant is None and "FilingDate" not in ctx.id:
             continue
@@ -369,7 +391,7 @@ def parse_edinet_xbrl(payload: str | bytes | Path) -> Fundamentals:
     raise FetchError("EDINET XBRL payload is not XML")
 
 
-def parse_edinet_xbrl_dir(path: Path) -> Fundamentals:
+def _maps_from_dir(path: Path) -> YearMaps:
     if not path.exists():
         raise FetchError(f"cached EDINET XBRL missing: {path}")
     files = [path] if path.is_file() else sorted(
@@ -398,4 +420,103 @@ def parse_edinet_xbrl_dir(path: Path) -> Fundamentals:
         parsed_any = True
     if not parsed_any:
         raise FetchError(f"cached EDINET XBRL missing usable instance: {path}")
-    return _fundamentals_from_maps(equity, income, issued, treasury)
+    return equity, income, issued, treasury
+
+
+def parse_edinet_xbrl_dir(path: Path) -> Fundamentals:
+    return _fundamentals_from_maps(*_maps_from_dir(path))
+
+
+def _year_start(end: date) -> date:
+    try:
+        prev = end.replace(year=end.year - 1)
+    except ValueError:
+        prev = date(end.year - 1, 2, 28)
+    start = prev + timedelta(days=1)
+    span = (end - start).days
+    if span < MIN_YEAR_DAYS or span > MAX_YEAR_DAYS:
+        start = end - timedelta(days=365)
+    return start
+
+
+def _xml_number(value: float) -> str:
+    if value != value:
+        raise FetchError("EDINET compact cannot serialize NaN")
+    if abs(value) >= 1e16:
+        return repr(value)
+    rounded = int(value)
+    if float(rounded) == value:
+        return str(rounded)
+    return repr(value)
+
+
+def compact_edinet_maps_xml(
+    equity: dict[date, float],
+    income: dict[date, float],
+    issued: dict[date, float],
+    treasury: dict[date, float],
+) -> str:
+    """Write parser-roundtrippable instance XML. Does not invent missing years."""
+    periods = sorted(set(equity) | set(income) | set(issued) | set(treasury), reverse=True)
+    if not periods:
+        raise FetchError("EDINET XBRL has no compactable facts")
+    if len(periods) > len(YEAR_LABELS):
+        periods = periods[: len(YEAR_LABELS)]
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        (
+            '<xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance" '
+            'xmlns:jpigp="http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor" '
+            'xmlns:jpdei="http://disclosure.edinet-fsa.go.jp/taxonomy/jpdei/2013-08-31/jpdei_cor" '
+            'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+        ),
+        '  <xbrli:unit id="JPY"><xbrli:measure>iso4217:JPY</xbrli:measure></xbrli:unit>',
+        '  <xbrli:unit id="Shares"><xbrli:measure>xbrli:shares</xbrli:measure></xbrli:unit>',
+    ]
+    facts: list[str] = []
+    for label, period in zip(YEAR_LABELS, periods):
+        start = _year_start(period)
+        iso = period.isoformat()
+        start_iso = start.isoformat()
+        lines.append(
+            f'  <xbrli:context id="{label}Instant">'
+            f'<xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity>'
+            f"<xbrli:period><xbrli:instant>{iso}</xbrli:instant></xbrli:period>"
+            f"</xbrli:context>"
+        )
+        lines.append(
+            f'  <xbrli:context id="{label}Duration">'
+            f'<xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity>'
+            f"<xbrli:period><xbrli:startDate>{start_iso}</xbrli:startDate><xbrli:endDate>{iso}</xbrli:endDate></xbrli:period>"
+            f"</xbrli:context>"
+        )
+        if period in equity:
+            facts.append(
+                f'  <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="{label}Instant" '
+                f'unitRef="JPY" decimals="-6">{_xml_number(equity[period])}</jpigp:EquityAttributableToOwnersOfParentIFRS>'
+            )
+        if period in income:
+            facts.append(
+                f'  <jpigp:ProfitLossAttributableToOwnersOfParentIFRS contextRef="{label}Duration" '
+                f'unitRef="JPY" decimals="-6">{_xml_number(income[period])}</jpigp:ProfitLossAttributableToOwnersOfParentIFRS>'
+            )
+        if period in issued:
+            facts.append(
+                f'  <jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI '
+                f'contextRef="{label}Instant" unitRef="Shares" decimals="0">{_xml_number(issued[period])}'
+                f"</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>"
+            )
+        if period in treasury:
+            facts.append(
+                f'  <jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI contextRef="{label}Instant" '
+                f'unitRef="Shares" decimals="0">{_xml_number(treasury[period])}'
+                f"</jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI>"
+            )
+    lines.extend(facts)
+    lines.append("</xbrli:xbrl>")
+    return "\n".join(lines) + "\n"
+
+
+def compact_edinet_xbrl_dir(path: Path) -> str:
+    """Compact cached yuho XML/zips to the facts the parser uses. No fetch."""
+    return compact_edinet_maps_xml(*_maps_from_dir(path))

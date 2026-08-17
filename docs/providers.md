@@ -53,8 +53,11 @@ EDINET XBRL (edinet source), from the PublicDoc instance in a type=1 zip:
 
 - `EquityAttributableToOwnersOfParent(IFRS)` else `ShareholdersEquity` / `NetAssets`
 - `ProfitLossAttributableToOwnersOfParent(IFRS)`
-- issued shares DEI minus treasury shares DEI (both must be present)
-- Consolidated contexts win over non-consolidated. Quarterly durations are skipped.
+- issued shares (DEI, else fiscal-year-end issued, else 5-year summary) minus
+  treasury shares (DEI, else treasury-shares-etc total). Both must be present.
+- Line-item members (`CapitalStockMember`, `Row1Member`, …) are skipped.
+  Consolidation members are not skipped. Consolidated contexts win over
+  non-consolidated. Quarterly durations are skipped.
 - `xsi:nil` is missing, not 0. Non-JPY monetary units are rejected.
 
 Only `CurPerType=FY` rows are used for J-Quants. Consolidated filings win over non-consolidated
@@ -103,9 +106,17 @@ python scripts/compact_jquants_caches.py \
 # --keep-existing leaves recorded 7203/6758/9984 fixtures in place
 
 # EDINET list then yuho XBRL zips (network; needs EDINET_API_KEY; not run in CI)
-python scripts/fetch_edinet_list.py --date 2026-05-08
+python scripts/fetch_edinet_list.py --date 2026-06-22
 python scripts/fetch_edinet_xbrl.py
 python scripts/build_public_data.py --source edinet
+
+# compact live yuho zips to instance facts (equity, profit, issued, treasury)
+# (not CI; does not write public/data; line-item members dropped; missing not 0)
+python scripts/compact_edinet_xbrl.py \
+  --src data/raw/edinet_xbrl --dst tests/data/edinet_xbrl \
+  --keep-existing
+# --existing-only skips names with no cache; it does not invent missing names
+# --keep-existing leaves recorded 7203/6758/9984 fixtures in place
 
 # operator refresh (not CI, not a GitHub Actions cron)
 python scripts/refresh_public_data.py --dry-run
@@ -147,8 +158,14 @@ from a live Yahoo chart dump; it does not fetch and does not write
 7203 / 6758 / 9984 keep four FY years and short Yahoo-aligned bars for
 parser tests. The other seven are free-plan dumps: about two FY years
 (one beginning-book ROE, not padded) and daily AdjC through the plan
-window (`priceAsOf` 2026-05-25). EDINET XBRL still covers Toyota, Sony,
-and SoftBank. `scripts/compact_jquants_caches.py` writes FY rows and
+window (`priceAsOf` 2026-05-25). Recorded EDINET yuho XBRL covers all 10
+names. 7203 / 6758 / 9984 keep synthetic four-year fixtures. The other
+seven are compacted PublicDoc facts from 2023–2026 yuho zips (3 beginning-book
+ROE years; missing treasury is not 0). `scripts/compact_edinet_xbrl.py`
+writes instance XML from a live zip dump; `--existing-only` skips names with
+no cache instead of failing; `--keep-existing` does not overwrite destination
+files that already exist. It does not fetch, does not invent missing names,
+and does not write `public/data`. `scripts/compact_jquants_caches.py` writes FY rows and
 AdjC-only bars from a live dump; `--existing-only` skips names with no cache
 instead of failing; `--keep-existing` does not overwrite destination files
 that already exist. It does not fetch, does not invent missing names, and

@@ -13,7 +13,7 @@
     "J-Quants free-plan daily bars can lag about 12 weeks. That is accepted; priceAsOf is the last close used. A paid Light plan is not required.",
     "Auto source fundamentals: EDINET XBRL, then J-Quants FY summary, then Yahoo timeseries.",
     "Names without cached financials stay ranking-ineligible. Missing is not 0.",
-    "Recorded Yahoo chart/timeseries cover all 10 names (~1y daily closes aligned to Nikkei 225). Recorded J-Quants FY + AdjC cover all 10: 7203/6758/9984 keep 4 FY years and short Yahoo-aligned bars; the other 7 are free-plan dumps (~2 FY years, AdjC through 2026-05-25). EDINET XBRL still covers 7203, 6758, 9984."
+    "Recorded Yahoo chart/timeseries cover all 10 names (~1y daily closes aligned to Nikkei 225). Recorded J-Quants FY + AdjC cover all 10: 7203/6758/9984 keep 4 FY years and short Yahoo-aligned bars; the other 7 are free-plan dumps (~2 FY years, AdjC through 2026-05-25). Recorded EDINET yuho XBRL covers all 10 (7203/6758/9984 keep synthetic 4-year fixtures; the other 7 are compacted PublicDoc facts from 2023-2026 yuho zips)."
   ],
   "stocks": [
     {

@@ -98,20 +98,33 @@ python scripts/compact_jquants_caches.py \
 invent the missing names. The compact script does not fetch, does not
 write `public/data`, and is not CI.
 
-```bash
-# document list (needs EDINET_API_KEY)
-python scripts/fetch_edinet_list.py --date 2026-05-08
-```
-
 ## EDINET XBRL (optional, not CI)
 
 Needs `EDINET_API_KEY` to download zips. Do not commit the key. Discovery uses
 cached document lists; this repo does not crawl every filing date.
 
 ```bash
+python scripts/fetch_edinet_list.py --date 2026-06-22
 python scripts/fetch_edinet_xbrl.py
 python scripts/build_public_data.py --source edinet
 ```
+
+After a live zip fetch, compact universe caches before copying into
+`tests/data/edinet_xbrl`. Compact keeps equity, profit, issued shares, and
+treasury shares. Line-item members (capital stock, rows) are dropped, not
+treated as total equity. Missing treasury stays missing, not `0`.
+`--keep-existing` leaves the recorded 7203 / 6758 / 9984 fixtures in place.
+
+```bash
+python scripts/compact_edinet_xbrl.py \
+  --src data/raw/edinet_xbrl \
+  --dst tests/data/edinet_xbrl \
+  --keep-existing
+```
+
+`--existing-only` skips universe names that have no cache. It does not
+invent the missing names. The compact script does not fetch, does not
+write `public/data`, and is not CI.
 
 ## Auto source + operator refresh (optional, not CI)
 
@@ -120,10 +133,11 @@ with more aligned returns (J-Quants daily AdjC vs Yahoo chart; J-Quants wins
 ties). Fundamentals per name: first complete source among EDINET
 XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
 inside one name. Recorded Yahoo charts cover ~1y of daily closes aligned to
-Nikkei 225 for all 10 universe names. Recorded J-Quants FY + AdjC also cover
-all 10; free-plan extras have ~2 FY years so auto still uses Yahoo
-timeseries there, and shorter/lagged bars so auto still uses the longer
-Yahoo chart.
+Nikkei 225 for all 10 universe names. Recorded EDINET yuho XBRL also covers
+all 10, so `--source auto` uses `edinet_xbrl` for fundamentals. Recorded
+J-Quants FY + AdjC cover all 10; free-plan extras have ~2 FY years and
+shorter/lagged bars, so auto still uses the longer Yahoo chart for prices
+and does not use those incomplete FY rows.
 Stock detail JSON includes per-name `priceSource` and `fundamentalsSource`.
 Ranking JSON includes the same per-name labels plus `returnCount` (aligned
 daily returns used for beta), `roeCount` (ROE history years used for

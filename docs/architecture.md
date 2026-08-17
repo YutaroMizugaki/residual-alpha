@@ -56,6 +56,7 @@ No trading
 - `scripts/compact_jquants_caches.py` — optional compact of J-Quants FY + AdjC JSON for recorded tests (no fetch, no cron)
 - `scripts/fetch_edinet_list.py` — optional EDINET document list
 - `scripts/fetch_edinet_xbrl.py` — optional EDINET yuho XBRL zip download
+- `scripts/compact_edinet_xbrl.py` — optional compact of EDINET yuho XBRL for recorded tests (no fetch, no cron)
 - `scripts/providers/universe.json` — 10 listed names for non-fixture sources
 - `tests/` — pytest (no live network)
 - `app/`, `components/`, `lib/` — Next.js display only. Ranking JSON includes per-name sources, `returnCount`, `roeCount`, `priceAsOf`, and `fundamentalsAsOf`.

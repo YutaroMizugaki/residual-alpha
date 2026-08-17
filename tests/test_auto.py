@@ -338,7 +338,7 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         assert stock["bookValue"] != 0
         assert stock["latestRoe"] is not None
         assert stock["priceSource"] == "yahoo_chart"
-        assert stock["fundamentalsSource"] == "yahoo_timeseries"
+        assert stock["fundamentalsSource"] == "edinet_xbrl"
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     by_ticker = {row["ticker"]: row for row in computed}
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
@@ -357,15 +357,15 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         assert listed["roeCount"] == by_ticker[ticker]["roeCount"]
         assert listed["priceAsOf"] is not None
         assert listed["fundamentalsAsOf"] is not None
-    for ticker in CORE:
+    for ticker in TICKERS:
         assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
     assert by_ticker["7203"]["priceAsOf"] == "2026-08-17"
     assert by_ticker["7203"]["fundamentalsAsOf"] == "2026-03-31"
+    assert by_ticker["6861"]["fundamentalsAsOf"] == "2026-03-20"
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)
-    assert "edinet_xbrl" in snapshot.fundamentals_source
-    assert "yahoo_timeseries" in snapshot.fundamentals_source
+    assert snapshot.fundamentals_source == "edinet_xbrl"
 
 
 def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
@@ -465,6 +465,9 @@ def test_ineligible_extra_prices_do_not_change_core_scores(tmp_path: Path):
     jq_core = tmp_path / "jq_core"
     for name in ("72030.json", "67580.json", "99840.json"):
         _copy_tree(JQUANTS_DIR / name, jq_core / name)
+    edinet_core = tmp_path / "edinet_core"
+    for name in ("72030", "67580", "99840"):
+        _copy_tree(XBRL_DIR / name, edinet_core / name)
     three = load_auto_snapshot(
         universe_path=_mini_universe(
             tmp_path / "universe.json",
@@ -474,7 +477,7 @@ def test_ineligible_extra_prices_do_not_change_core_scores(tmp_path: Path):
         fundamentals_dir=fund_dir,
         jquants_dir=jq_core,
         jquants_bars_dir=tmp_path / "no-bars",
-        edinet_dir=XBRL_DIR,
+        edinet_dir=edinet_core,
         fundamentals_path=overlay,
     )
     ten = load_auto_snapshot(
@@ -482,7 +485,7 @@ def test_ineligible_extra_prices_do_not_change_core_scores(tmp_path: Path):
         fundamentals_dir=fund_dir,
         jquants_dir=jq_core,
         jquants_bars_dir=tmp_path / "no-bars",
-        edinet_dir=XBRL_DIR,
+        edinet_dir=edinet_core,
         fundamentals_path=overlay,
     )
     extras = [row for row in ten.stocks if row["ticker"] not in CORE]
