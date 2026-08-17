@@ -8,7 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from providers.errors import FetchError, ProviderError
-from providers.http import cache_filename, fetch_yahoo_chart_json, fetch_yahoo_fundamentals_json
+from providers.http import (
+    cache_filename,
+    fetch_jquants_summary_json,
+    fetch_yahoo_chart_json,
+    fetch_yahoo_fundamentals_json,
+)
+from providers.jquants_summary import parse_jquants_summary
 from providers.series import aligned_simple_returns
 from providers.stooq_csv import parse_stooq_csv
 from providers.yahoo_chart import parse_yahoo_chart
@@ -83,12 +89,69 @@ def load_fundamentals(path: Path = FUNDAMENTALS_PATH) -> dict[str, dict[str, Any
 def _payload_from_raw(raw_dir: Path, symbol: str) -> dict[str, Any]:
     path = raw_dir / cache_filename(symbol)
     if not path.exists():
-        raise FetchError(f"cached Yahoo file missing: {path}")
+        raise FetchError(f"cached provider file missing: {path}")
     return load_json(path)
 
 
+def jquants_code(item: dict[str, Any]) -> str:
+    if item.get("jquantsCode"):
+        return str(item["jquantsCode"])
+    ticker = str(item["ticker"])
+    if len(ticker) == 4 and ticker.isdigit():
+        return ticker + "0"
+    return ticker
+
+
+def _blank_stock(ticker: str, company_name: str) -> dict[str, Any]:
+    return {
+        "ticker": ticker,
+        "companyName": company_name,
+        "price": None,
+        "priceAsOf": None,
+        "bookValue": None,
+        "sharesOutstanding": None,
+        "latestRoe": None,
+        "roeHistory": None,
+        "fundamentalsAsOf": None,
+        "stockReturns": None,
+        "marketReturns": None,
+    }
+
+
+def _apply_yahoo_prices(
+    stock: dict[str, Any],
+    *,
+    yahoo_symbol: str,
+    load_chart,
+    market_series,
+    as_of_dates: list[str],
+) -> None:
+    try:
+        series = parse_yahoo_chart(load_chart(yahoo_symbol), expected_symbol=yahoo_symbol)
+        last = series.last()
+        stock_returns, market_returns = aligned_simple_returns(series, market_series)
+        if last is not None:
+            stock["price"] = last[1]
+            stock["priceAsOf"] = last[0].isoformat()
+            as_of_dates.append(stock["priceAsOf"])
+        if stock_returns and market_returns:
+            stock["stockReturns"] = stock_returns
+            stock["marketReturns"] = market_returns
+    except ProviderError:
+        pass
+
+
+def _apply_parsed_fundamentals(stock: dict[str, Any], fundamentals) -> bool:
+    stock["bookValue"] = fundamentals.book_value
+    stock["sharesOutstanding"] = fundamentals.shares_outstanding
+    stock["latestRoe"] = fundamentals.latest_roe
+    stock["roeHistory"] = fundamentals.roe_history
+    stock["fundamentalsAsOf"] = fundamentals.fiscal_year_end
+    return fundamentals.book_value is not None or fundamentals.latest_roe is not None
+
+
 def _merge_overlay(base: dict[str, Any], overlay: dict[str, Any]) -> tuple[dict[str, Any], bool]:
-    """Fill only fields that are still missing. Do not overwrite Yahoo values."""
+    """Fill only fields that are still missing. Do not overwrite provider values."""
     merged = dict(base)
     filled = False
     for key in ("bookValue", "sharesOutstanding", "latestRoe", "roeHistory", "fundamentalsAsOf"):
@@ -140,40 +203,20 @@ def load_free_snapshot(
         ticker = str(item["ticker"])
         yahoo_symbol = str(item["yahooSymbol"])
         company_name = str(item["companyName"])
-        stock: dict[str, Any] = {
-            "ticker": ticker,
-            "companyName": company_name,
-            "price": None,
-            "priceAsOf": None,
-            "bookValue": None,
-            "sharesOutstanding": None,
-            "latestRoe": None,
-            "roeHistory": None,
-            "fundamentalsAsOf": None,
-            "stockReturns": None,
-            "marketReturns": None,
-        }
+        stock = _blank_stock(ticker, company_name)
+        _apply_yahoo_prices(
+            stock,
+            yahoo_symbol=yahoo_symbol,
+            load_chart=load_chart,
+            market_series=market_series,
+            as_of_dates=as_of_dates,
+        )
         try:
-            series = parse_yahoo_chart(load_chart(yahoo_symbol), expected_symbol=yahoo_symbol)
-            last = series.last()
-            stock_returns, market_returns = aligned_simple_returns(series, market_series)
-            if last is not None:
-                stock["price"] = last[1]
-                stock["priceAsOf"] = last[0].isoformat()
-                as_of_dates.append(stock["priceAsOf"])
-            if stock_returns and market_returns:
-                stock["stockReturns"] = stock_returns
-                stock["marketReturns"] = market_returns
-        except ProviderError:
-            pass
-        try:
-            fundamentals = parse_yahoo_fundamentals(load_fundamentals_payload(yahoo_symbol))
-            stock["bookValue"] = fundamentals.book_value
-            stock["sharesOutstanding"] = fundamentals.shares_outstanding
-            stock["latestRoe"] = fundamentals.latest_roe
-            stock["roeHistory"] = fundamentals.roe_history
-            stock["fundamentalsAsOf"] = fundamentals.fiscal_year_end
-            if fundamentals.book_value is not None or fundamentals.latest_roe is not None:
+            used = _apply_parsed_fundamentals(
+                stock,
+                parse_yahoo_fundamentals(load_fundamentals_payload(yahoo_symbol)),
+            )
+            if used:
                 used_yahoo_fundamentals = True
         except ProviderError:
             pass
@@ -207,6 +250,108 @@ def load_free_snapshot(
             "Prices from Yahoo Finance chart; fundamentals from Yahoo annual timeseries "
             "(equity, net income, shares). EDINET/J-Quants are not used. Missing values "
             "are not replaced with 0. Not investment advice."
+        ),
+        assumptions={
+            "riskFreeRate": float(universe["riskFreeRate"]),
+            "equityRiskPremium": float(universe["equityRiskPremium"]),
+            "retentionRatio": float(universe["retentionRatio"]),
+            "marketReturns": None,
+        },
+        stocks=stocks,
+    )
+
+
+def load_jquants_snapshot(
+    *,
+    universe_path: Path = UNIVERSE_PATH,
+    fundamentals_path: Path = FUNDAMENTALS_PATH,
+    raw_dir: Path | None = None,
+    jquants_dir: Path | None = None,
+    fetch: bool = False,
+    range_: str | None = None,
+    fetcher=None,
+    jquants_api_key: str | None = None,
+) -> DataSnapshot:
+    """
+    Prices from Yahoo chart JSON. Fundamentals from J-Quants v2 /fins/summary.
+
+    Live J-Quants calls need JQUANTS_API_KEY. EDINET XBRL is not parsed.
+    Missing values are not replaced with 0.
+    """
+    universe = load_universe(universe_path)
+    overlay_map = load_fundamentals(fundamentals_path)
+    market_symbol = str(universe["marketSymbol"])
+    lookback = range_ or str(universe.get("range", "1y"))
+    raw_dir = raw_dir or (ROOT / "data" / "raw" / "yahoo")
+    jquants_dir = jquants_dir or (ROOT / "data" / "raw" / "jquants")
+
+    def load_chart(symbol: str) -> dict[str, Any]:
+        if fetch:
+            return fetch_yahoo_chart_json(symbol, range_=lookback, fetcher=fetcher)
+        return _payload_from_raw(raw_dir, symbol)
+
+    def load_summary(code: str) -> dict[str, Any]:
+        if fetch:
+            return fetch_jquants_summary_json(code, api_key=jquants_api_key, fetcher=fetcher)
+        return _payload_from_raw(jquants_dir, code)
+
+    market_series = parse_yahoo_chart(load_chart(market_symbol), expected_symbol=market_symbol)
+    stocks: list[dict[str, Any]] = []
+    as_of_dates: list[str] = []
+    used_jquants = False
+    used_overlay = False
+
+    for item in universe["stocks"]:
+        ticker = str(item["ticker"])
+        yahoo_symbol = str(item["yahooSymbol"])
+        code = jquants_code(item)
+        stock = _blank_stock(ticker, str(item["companyName"]))
+        _apply_yahoo_prices(
+            stock,
+            yahoo_symbol=yahoo_symbol,
+            load_chart=load_chart,
+            market_series=market_series,
+            as_of_dates=as_of_dates,
+        )
+        try:
+            used = _apply_parsed_fundamentals(
+                stock,
+                parse_jquants_summary(load_summary(code), expected_code=code),
+            )
+            if used:
+                used_jquants = True
+        except ProviderError:
+            pass
+        stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
+        if filled:
+            used_overlay = True
+        stocks.append(stock)
+
+    as_of = max(as_of_dates) if as_of_dates else None
+    if used_jquants and used_overlay:
+        fundamentals_source = "jquants_summary+manual_overlay"
+    elif used_jquants:
+        fundamentals_source = "jquants_summary"
+    elif used_overlay:
+        fundamentals_source = "manual_overlay"
+    else:
+        fundamentals_source = "missing"
+
+    return DataSnapshot(
+        source="jquants",
+        source_label="J-Quants",
+        price_source="yahoo_chart",
+        fundamentals_source=fundamentals_source,
+        market_symbol=market_symbol,
+        as_of_date=as_of,
+        disclaimer_ja=(
+            "価格は Yahoo Finance chart、財務は J-Quants 決算短信サマリー（キー必須）です。"
+            "EDINET の XBRL は使いません。欠損は 0 にしません。投資助言ではありません。"
+        ),
+        disclaimer_en=(
+            "Prices from Yahoo Finance chart; fundamentals from J-Quants FY summary "
+            "(API key required for live fetch). EDINET XBRL is not parsed. Missing "
+            "values are not replaced with 0. Not investment advice."
         ),
         assumptions={
             "riskFreeRate": float(universe["riskFreeRate"]),

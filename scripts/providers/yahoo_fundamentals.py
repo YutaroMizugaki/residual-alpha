@@ -3,31 +3,21 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
 from providers.errors import BotWallError, FetchError, InvalidPriceDataError
+from providers.fundamentals_common import (
+    JPY_MILLION,
+    Fundamentals,
+    as_date,
+    beginning_book_roes,
+    pack_roes,
+)
 
-JPY_MILLION = 1_000_000.0
 EQUITY_KEY = "annualStockholdersEquity"
 INCOME_KEY = "annualNetIncomeCommonStockholders"
 SHARES_KEY = "annualOrdinarySharesNumber"
-MIN_YEAR_DAYS = 300
-MAX_YEAR_DAYS = 450
-
-
-@dataclass(frozen=True)
-class Fundamentals:
-    book_value: float | None  # million JPY
-    shares_outstanding: float | None  # million shares
-    latest_roe: float | None
-    roe_history: list[float] | None  # oldest → newest
-    fiscal_year_end: str | None
-
-
-def _as_date(value: str) -> date:
-    return date.fromisoformat(value[:10])
 
 
 def _raw_map(payload: dict[str, Any], key: str, *, require_jpy: bool) -> dict[date, float]:
@@ -59,7 +49,7 @@ def _raw_map(payload: dict[str, Any], key: str, *, require_jpy: bool) -> dict[da
                 continue
             if number != number:  # NaN
                 continue
-            out[_as_date(str(as_of))] = number
+            out[as_date(str(as_of))] = number
     return out
 
 
@@ -97,22 +87,8 @@ def parse_yahoo_fundamentals(payload: Any) -> Fundamentals:
         if latest_shares > 0:
             shares_outstanding = latest_shares / JPY_MILLION
 
-    year_dates = sorted(set(equity) | set(income))
-    roes: list[float] = []
-    for prev, curr in zip(year_dates, year_dates[1:]):
-        span = (curr - prev).days
-        if span < MIN_YEAR_DAYS or span > MAX_YEAR_DAYS:
-            continue
-        beginning = equity.get(prev)
-        net_income = income.get(curr)
-        if beginning is None or net_income is None:
-            continue
-        if beginning <= 0:
-            continue
-        roes.append(net_income / beginning)
-
-    latest_roe = roes[-1] if roes else None
-    roe_history = roes[-3:] if roes else None
+    roes = beginning_book_roes(equity, income)
+    latest_roe, roe_history = pack_roes(roes)
 
     return Fundamentals(
         book_value=book_value,

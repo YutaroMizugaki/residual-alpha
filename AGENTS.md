@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Cursor Cloud specific instructions
 
-`residual-alpha` is a single-repo fixture MVP: a Python quant engine computes valuations and writes static JSON, which a Next.js 16 (App Router, Turbopack, React 19) frontend renders. There is no database, backend API, or live market feed.
+`residual-alpha` is a single-repo fixture MVP: a Python quant engine computes valuations and writes static JSON, which a Next.js 16 (App Router, Turbopack, React 19) frontend renders. There is no database or backend API. CI always builds fixture data. Optional Yahoo / J-Quants / EDINET fetch scripts are not run in CI and must not commit API keys.
 
 - Dependencies are refreshed automatically on startup (`pip install -r requirements.txt` for `numpy`/`pytest`, `npm ci` for the frontend). No manual install is needed.
 - `pytest` is installed to `~/.local/bin`, which is not on `PATH`. Run tests with `python3 -m pytest` (config in `pytest.ini`; sources under `scripts/` via `pythonpath`).

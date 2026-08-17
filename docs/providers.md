@@ -16,18 +16,31 @@ Provider snapshot
 | --- | --- | --- | --- | --- |
 | `fixture` | fictional JSON | fictional JSON | no | yes (CI) |
 | `free` | Yahoo Finance chart JSON | Yahoo annual timeseries | no | no |
+| `jquants` | Yahoo Finance chart JSON | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch | no |
 
-Yahoo timeseries fields:
+Yahoo timeseries fields (free source):
 
 - `annualStockholdersEquity` → book value (JPY → million JPY)
 - `annualNetIncomeCommonStockholders` → net income
 - `annualOrdinarySharesNumber` → shares (count → million shares)
 
+J-Quants FY fields (jquants source):
+
+- `ShEq` (else `Eq`) → book value (JPY → million JPY)
+- `NP` → net income
+- `ShOutFY − TrShFY` → shares (both must be present; empty treasury is not 0)
+
+Only `CurPerType=FY` rows are used. Consolidated filings win over non-consolidated
+for the same fiscal year-end. Reported `ROE` from the API is ignored; the engine
+computes beginning-book ROE.
+
 ROE for fiscal year `t` is `NI_t / Equity_{t-1}` (beginning book). Years more
 than ~15 months apart are not joined. Missing years are dropped, not filled
 with 0 or with a copied latest ROE. The engine still needs 3 history years.
 
-EDINET and J-Quants are **not** called. Both require API keys.
+EDINET v2 document lists can be fetched with `EDINET_API_KEY`. 401/403 is a
+fetch failure, not an empty filing list. **XBRL is not parsed** in this phase,
+so EDINET is not a valuation source.
 
 Stooq live HTTP is **not** used. Automated requests receive an HTML bot-wall.
 Stooq daily CSV files can still be parsed if an operator supplies them.
@@ -43,7 +56,16 @@ python scripts/fetch_free_data.py
 
 # rebuild UI JSON from cached Yahoo files
 python scripts/build_public_data.py --source free
+
+# J-Quants FY summaries (network; needs JQUANTS_API_KEY; not run in CI)
+python scripts/fetch_jquants_data.py
+python scripts/build_public_data.py --source jquants
+
+# EDINET document list only (network; needs EDINET_API_KEY; no XBRL)
+python scripts/fetch_edinet_list.py --date 2026-05-08
 ```
+
+Do not commit API keys. `.env*` is gitignored.
 
 Optional overlay: `scripts/providers/fundamentals.json`. Empty by default.
 Overlay fills only fields that are still missing.
