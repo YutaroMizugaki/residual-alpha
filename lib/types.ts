@@ -17,6 +17,8 @@ export type RankingRow = {
   totalScore: number | null;
   eligible: boolean;
   exclusionReasons: ExclusionReason[];
+  priceSource?: string | null;
+  fundamentalsSource?: string | null;
 };
 
 export type ForecastYear = {

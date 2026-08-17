@@ -97,7 +97,8 @@ cache does not block a complete lower-tier cache. If nothing is complete,
 the first partial is kept. Names without a cached chart or financials stay
 ranking-ineligible; missing is not 0.
 
-Each stock row carries its own `priceSource` and `fundamentalsSource`.
+Each stock row carries its own `priceSource` and `fundamentalsSource` in
+both ranking JSON and stock detail JSON.
 Universe `meta.json` stays the union across names (`jquants_bars+yahoo_chart`
 when auto mixes). The stock page reads the per-name labels, not the mix.
 Missing sources stay missing (`null`), not `0` and not another name's source.

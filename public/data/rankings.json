@@ -15,7 +15,9 @@
     "riskScore": 19.7,
     "totalScore": 82.2,
     "eligible": true,
-    "exclusionReasons": []
+    "exclusionReasons": [],
+    "priceSource": "fixture",
+    "fundamentalsSource": "fixture"
   },
   {
     "rank": 2,
@@ -33,7 +35,9 @@
     "riskScore": 17.45,
     "totalScore": 79.95,
     "eligible": true,
-    "exclusionReasons": []
+    "exclusionReasons": [],
+    "priceSource": "fixture",
+    "fundamentalsSource": "fixture"
   },
   {
     "rank": 3,
@@ -51,7 +55,9 @@
     "riskScore": 15.0,
     "totalScore": 52.5,
     "eligible": true,
-    "exclusionReasons": []
+    "exclusionReasons": [],
+    "priceSource": "fixture",
+    "fundamentalsSource": "fixture"
   },
   {
     "rank": 4,
@@ -69,7 +75,9 @@
     "riskScore": 0.0,
     "totalScore": 27.5,
     "eligible": true,
-    "exclusionReasons": []
+    "exclusionReasons": [],
+    "priceSource": "fixture",
+    "fundamentalsSource": "fixture"
   },
   {
     "rank": 5,
@@ -87,7 +95,9 @@
     "riskScore": 11.83,
     "totalScore": 24.33,
     "eligible": true,
-    "exclusionReasons": []
+    "exclusionReasons": [],
+    "priceSource": "fixture",
+    "fundamentalsSource": "fixture"
   },
   {
     "rank": null,
@@ -111,6 +121,8 @@
       "missing_shares_outstanding",
       "missing_returns",
       "missing_roe"
-    ]
+    ],
+    "priceSource": "fixture",
+    "fundamentalsSource": "fixture"
   }
 ]

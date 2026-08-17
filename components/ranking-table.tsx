@@ -78,6 +78,7 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
               <th className="px-3 py-2">Rank</th>
               <th className="px-3 py-2">Ticker</th>
               <th className="px-3 py-2">Company</th>
+              <th className="px-3 py-2">Sources</th>
               <th className="px-3 py-2 text-right">Price</th>
               <th className="px-3 py-2 text-right">Intrinsic</th>
               <th className="px-3 py-2 text-right">Upside</th>
@@ -108,6 +109,9 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
                     </Link>
                   </td>
                   <td className="px-3 py-2">{row.companyName}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">
+                    {row.priceSource ?? "missing"} / {row.fundamentalsSource ?? "missing"}
+                  </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatPrice(row.price)}
                   </td>
@@ -153,7 +157,8 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
           Excluded from ranking ({excluded.length}):{" "}
           {excluded.map((row) => (
             <Link key={row.ticker} className="mr-2 underline" href={`/stocks/${row.ticker}`}>
-              {row.ticker} {row.companyName}
+              {row.ticker} {row.companyName} ({row.priceSource ?? "missing"} /{" "}
+              {row.fundamentalsSource ?? "missing"})
             </Link>
           ))}
         </p>

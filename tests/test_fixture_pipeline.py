@@ -28,6 +28,8 @@ RANKING_FIELDS = [
     "qualityScore",
     "riskScore",
     "totalScore",
+    "priceSource",
+    "fundamentalsSource",
 ]
 
 
@@ -118,6 +120,8 @@ def test_public_json_matches_engine_and_schema():
     for row in public_rankings:
         for field in RANKING_FIELDS:
             assert field in row
+        assert row["priceSource"] == "fixture"
+        assert row["fundamentalsSource"] == "fixture"
 
     for row in universe:
         public_detail = json.loads((STOCKS_DIR / f"{row['ticker']}.json").read_text(encoding="utf-8"))
@@ -146,6 +150,9 @@ def test_evaluate_stock_passes_per_name_sources():
     detail = detail_row(row)
     assert detail["priceSource"] == "jquants_bars"
     assert detail["fundamentalsSource"] == "edinet_xbrl"
+    ranked = ranking_row(row)
+    assert ranked["priceSource"] == "jquants_bars"
+    assert ranked["fundamentalsSource"] == "edinet_xbrl"
     stock["priceSource"] = "  "
     stock["fundamentalsSource"] = ""
     blank = evaluate_universe([stock], fixtures["assumptions"])[0]

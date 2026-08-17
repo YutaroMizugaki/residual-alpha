@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from models.pipeline import evaluate_universe
+from models.pipeline import evaluate_universe, ranking_row
 from providers.loader import load_auto_snapshot, load_universe
 from refresh_public_data import fetch_plan
 
@@ -270,6 +270,11 @@ def test_auto_mixed_sources_across_names(tmp_path: Path):
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
     assert set(ranked) == CORE
+    by_rank = {row["ticker"]: ranking_row(row) for row in computed}
+    assert by_rank["7203"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_rank["6758"]["fundamentalsSource"] == "jquants_summary"
+    assert by_rank["9984"]["fundamentalsSource"] == "yahoo_timeseries"
+    assert by_rank["7203"]["fundamentalsSource"] != snapshot.fundamentals_source
 
 
 def test_auto_does_not_mix_sources_inside_one_name(tmp_path: Path):
@@ -380,6 +385,9 @@ def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
         assert by_ticker[ticker]["eligible"] is False
         assert by_ticker[ticker]["bookValue"] is None
         assert by_ticker[ticker]["price"] is None
+        listed = ranking_row(by_ticker[ticker])
+        assert listed["priceSource"] is None
+        assert listed["fundamentalsSource"] is None
         assert "missing_book_value" in by_ticker[ticker]["exclusionReasons"]
         assert "missing_price" in by_ticker[ticker]["exclusionReasons"]
 

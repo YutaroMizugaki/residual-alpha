@@ -270,6 +270,8 @@ def ranking_row(stock: dict) -> dict:
         "totalScore": _round(stock["totalScore"], 2),
         "eligible": stock["eligible"],
         "exclusionReasons": stock["exclusionReasons"],
+        "priceSource": stock.get("priceSource"),
+        "fundamentalsSource": stock.get("fundamentalsSource"),
     }
 
 
