@@ -101,10 +101,11 @@ write `public/data`, and is not CI.
 ## EDINET XBRL (optional, not CI)
 
 Needs `EDINET_API_KEY` to download zips. Do not commit the key. Discovery uses
-cached document lists; this repo does not crawl every filing date.
+cached document lists. Pass each filing date with `--date`; this repo does not
+crawl a date range.
 
 ```bash
-python scripts/fetch_edinet_list.py --date 2026-06-22
+python scripts/fetch_edinet_list.py --date 2026-06-15 --date 2026-06-22
 python scripts/fetch_edinet_xbrl.py
 python scripts/build_public_data.py --source edinet
 ```

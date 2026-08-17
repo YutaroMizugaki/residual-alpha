@@ -108,7 +108,7 @@ python scripts/compact_jquants_caches.py \
 # --keep-existing leaves recorded 7203/6758/9984 fixtures in place
 
 # EDINET list then yuho XBRL zips (network; needs EDINET_API_KEY; not run in CI)
-python scripts/fetch_edinet_list.py --date 2026-06-22
+python scripts/fetch_edinet_list.py --date 2026-06-15 --date 2026-06-22
 python scripts/fetch_edinet_xbrl.py
 python scripts/build_public_data.py --source edinet
 
@@ -148,8 +148,9 @@ vars are set. `--source jquants` / `--source edinet` fetch Yahoo plus that
 keyed cache when the matching key is present.
 
 Fetch failures print a warning and continue; a failed build still fails the
-script. It does not crawl EDINET filing dates. Run
-`fetch_edinet_list.py --date YYYY-MM-DD` first if you need new yuho zips.
+script. It does not crawl EDINET filing dates. Repeat
+`fetch_edinet_list.py --date YYYY-MM-DD` for each filing day if you need
+new yuho zips. That is not a range crawl.
 
 The listed-name universe in `scripts/providers/universe.json` has 10 tickers.
 Recorded Yahoo chart and annual timeseries cover all 10. Charts are ~1y of

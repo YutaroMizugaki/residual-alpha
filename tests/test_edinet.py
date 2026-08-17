@@ -7,6 +7,7 @@ import pytest
 
 from providers.edinet import latest_yuho, parse_edinet_documents, yuho_history
 from providers.errors import BotWallError, FetchError
+from fetch_edinet_list import fetch_edinet_lists, parse_filing_date
 from providers.http import edinet_documents_url, fetch_edinet_documents_json
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,3 +83,53 @@ def test_edinet_url_does_not_embed_key_until_live_fetch():
     assert "Subscription-Key" not in url
     keyed = edinet_documents_url("2026-01-01", api_key="secret")
     assert "secret" in keyed
+
+
+def test_parse_filing_date_rejects_invalid():
+    with pytest.raises(FetchError, match="invalid"):
+        parse_filing_date("2026/06/22")
+
+
+def test_fetch_edinet_lists_writes_operator_dates_only(tmp_path: Path):
+    recorded = (EDINET_DIR / "documents.json").read_text(encoding="utf-8")
+    seen: list[str] = []
+
+    def fake_fetch(url: str) -> tuple[int, str, str]:
+        assert "Subscription-Key" not in url
+        seen.append(url)
+        return 200, "application/json", recorded
+
+    assert (
+        fetch_edinet_lists(
+            ["2026-06-15", "2026-06-15", " 2026-06-22 "],
+            tmp_path,
+            fetcher=fake_fetch,
+        )
+        == 0
+    )
+    assert (tmp_path / "2026-06-15.json").exists()
+    assert (tmp_path / "2026-06-22.json").exists()
+    assert len(seen) == 2
+    assert "2026-06-15" in seen[0]
+    assert "2026-06-22" in seen[1]
+    assert not (tmp_path / "public").exists()
+
+
+def test_fetch_edinet_lists_keeps_success_when_one_date_fails(tmp_path: Path):
+    recorded = (EDINET_DIR / "documents.json").read_text(encoding="utf-8")
+
+    def fake_fetch(url: str) -> tuple[int, str, str]:
+        if "2026-06-16" in url:
+            return 401, "application/json", (EDINET_DIR / "unauthorized.json").read_text(
+                encoding="utf-8"
+            )
+        return 200, "application/json", recorded
+
+    assert fetch_edinet_lists(["2026-06-15", "2026-06-16"], tmp_path, fetcher=fake_fetch) == 1
+    assert (tmp_path / "2026-06-15.json").exists()
+    assert not (tmp_path / "2026-06-16.json").exists()
+
+
+def test_fetch_edinet_lists_empty_dates_fail(tmp_path: Path):
+    assert fetch_edinet_lists([], tmp_path) == 1
+    assert list(tmp_path.glob("*.json")) == []
