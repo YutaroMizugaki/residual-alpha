@@ -51,6 +51,7 @@ No trading
 - `scripts/build_public_data.py` — writes `public/data/`
 - `scripts/refresh_public_data.py` — optional operator fetch + rebuild (no cron)
 - `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
+- `scripts/compact_yahoo_charts.py` — optional compact/align of Yahoo chart JSON for recorded tests (no fetch, no cron)
 - `scripts/fetch_jquants_data.py` — optional J-Quants FY summary + daily bars download
 - `scripts/fetch_edinet_list.py` — optional EDINET document list
 - `scripts/fetch_edinet_xbrl.py` — optional EDINET yuho XBRL zip download

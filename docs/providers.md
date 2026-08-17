@@ -78,6 +78,10 @@ python scripts/build_public_data.py
 # download Yahoo chart + fundamentals JSON (network; not run in CI)
 python scripts/fetch_free_data.py
 
+# compact live Yahoo charts to timestamp + close, inner-join to Nikkei
+# (not CI; does not write public/data; missing days dropped, not filled with 0)
+python scripts/compact_yahoo_charts.py --src data/raw/yahoo --dst tests/data/yahoo --align
+
 # rebuild UI JSON from cached Yahoo files
 python scripts/build_public_data.py --source free
 
@@ -125,7 +129,9 @@ script. It does not crawl EDINET filing dates. Run
 The listed-name universe in `scripts/providers/universe.json` has 10 tickers.
 Recorded Yahoo chart and annual timeseries cover all 10. Charts are ~1y of
 daily closes, inner-joined to Nikkei 225 (missing days dropped, not filled
-with 0). J-Quants summaries, daily bars, and EDINET XBRL still cover Toyota,
+with 0). `scripts/compact_yahoo_charts.py --align` writes that compact form
+from a live Yahoo chart dump; it does not fetch and does not write
+`public/data`. J-Quants summaries, daily bars, and EDINET XBRL still cover Toyota,
 Sony, and SoftBank. Recorded J-Quants bars are the recent window. `--source
 auto` prefers the longer complete Yahoo series when bars are shorter;
 `--source jquants` still uses those bars first. Names without a keyed cache

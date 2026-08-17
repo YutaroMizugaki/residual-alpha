@@ -49,6 +49,16 @@ python scripts/build_public_data.py --source free
 Prices from Yahoo chart; fundamentals from Yahoo annual timeseries.
 Missing values are not replaced with 0. Not investment advice.
 
+Recorded test charts under `tests/data/yahoo/` are compact timestamp + close
+JSON, inner-joined to Nikkei 225. After a live fetch, compact before copying
+into that directory:
+
+```bash
+python scripts/compact_yahoo_charts.py --src data/raw/yahoo --dst tests/data/yahoo --align
+```
+
+The compact script does not fetch, does not write `public/data`, and is not CI.
+
 ## J-Quants (optional, not CI)
 
 Needs `JQUANTS_API_KEY` for live download. Do not commit the key. The

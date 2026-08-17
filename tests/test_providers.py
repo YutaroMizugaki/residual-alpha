@@ -5,12 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from providers.errors import BotWallError, InvalidPriceDataError
+from providers.errors import BotWallError, FetchError, InvalidPriceDataError
 from providers.http import cache_filename, fetch_yahoo_chart_json, fetch_yahoo_fundamentals_json
 from providers.loader import load_fixture_snapshot, load_free_snapshot
 from providers.series import aligned_simple_returns
 from providers.stooq_csv import parse_stooq_csv
-from providers.yahoo_chart import parse_yahoo_chart
+from providers.yahoo_chart import (
+    compact_yahoo_chart,
+    compact_yahoo_charts,
+    parse_yahoo_chart,
+)
 from providers.yahoo_fundamentals import parse_yahoo_fundamentals
 from models.pipeline import evaluate_universe
 
@@ -86,6 +90,107 @@ def test_yahoo_null_close_not_zero():
 def test_yahoo_html_is_fetch_error():
     with pytest.raises(BotWallError):
         parse_yahoo_chart("<!DOCTYPE html><html>verify your browser</html>")
+
+
+def _chart_payload(symbol: str, timestamps: list[int], closes: list[object], **extra_meta):
+    meta = {"currency": "JPY", "symbol": symbol, "gmtoffset": 32400, "noise": "drop", **extra_meta}
+    return {
+        "chart": {
+            "result": [
+                {
+                    "meta": meta,
+                    "timestamp": timestamps,
+                    "indicators": {
+                        "quote": [{"close": closes, "volume": [1] * len(timestamps)}],
+                        "adjclose": [{"adjclose": closes}],
+                    },
+                }
+            ],
+            "error": None,
+        }
+    }
+
+
+def test_compact_yahoo_chart_drops_unused_fields_nulls_and_zero():
+    payload = _chart_payload("X.T", [1, 2, 3, 4], [10.0, None, 0, 12.0], regularMarketPrice=12.0)
+    compact = compact_yahoo_chart(payload)
+    result = compact["chart"]["result"][0]
+    assert result["meta"]["symbol"] == "X.T"
+    assert "noise" not in result["meta"]
+    assert "volume" not in result["indicators"]["quote"][0]
+    assert "adjclose" not in result["indicators"]
+    assert result["timestamp"] == [1, 4]
+    assert result["indicators"]["quote"][0]["close"] == pytest.approx([10.0, 12.0])
+    assert None not in result["indicators"]["quote"][0]["close"]
+    assert 0 not in result["indicators"]["quote"][0]["close"]
+    series = parse_yahoo_chart(compact, expected_symbol="X.T")
+    assert [price for _, price in series.points] == pytest.approx([10.0, 12.0])
+
+
+def test_compact_yahoo_chart_keeps_recorded_last_close():
+    payload = json.loads((YAHOO_DIR / "7203.T.json").read_text(encoding="utf-8"))
+    original = parse_yahoo_chart(payload, expected_symbol="7203.T")
+    compact = compact_yahoo_chart(payload, expected_symbol="7203.T")
+    again = compact_yahoo_chart(compact, expected_symbol="7203.T")
+    compacted = parse_yahoo_chart(compact, expected_symbol="7203.T")
+    assert compact == again
+    assert compacted.last() == original.last()
+    assert compacted.last()[1] == pytest.approx(3013.0)
+    assert len(compacted.points) == len(original.points)
+
+
+def test_compact_yahoo_charts_align_drops_missing_days_not_zero():
+    market = _chart_payload("^N225", [1, 2, 3, 4], [100.0, 101.0, 102.0, 103.0])
+    toyota = _chart_payload("7203.T", [1, 2, 3, 4], [10.0, None, 12.0, 13.0])
+    sony = _chart_payload("6758.T", [1, 2, 3, 4], [20.0, 21.0, None, 23.0])
+    compacted = compact_yahoo_charts(
+        {"_N225.json": market, "7203.T.json": toyota, "6758.T.json": sony},
+        align=True,
+    )
+    for name, payload in compacted.items():
+        ts = payload["chart"]["result"][0]["timestamp"]
+        closes = payload["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+        assert ts == [1, 4]
+        assert None not in closes
+        assert 0 not in closes
+        assert len(ts) == len(closes) == 2
+    assert compacted["7203.T.json"]["chart"]["result"][0]["indicators"]["quote"][0]["close"][-1] == pytest.approx(13.0)
+    assert compacted["6758.T.json"]["chart"]["result"][0]["indicators"]["quote"][0]["close"][-1] == pytest.approx(23.0)
+
+
+def test_compact_yahoo_charts_align_without_overlap_is_missing():
+    left = _chart_payload("A.T", [1, 2], [10.0, 11.0])
+    right = _chart_payload("B.T", [8, 9], [20.0, 21.0])
+    with pytest.raises(FetchError):
+        compact_yahoo_charts({"A.T.json": left, "B.T.json": right}, align=True)
+
+
+def test_compact_chart_dir_aligns_universe_only(tmp_path: Path):
+    from compact_yahoo_charts import compact_chart_dir
+
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    src.mkdir()
+    (src / "null_close.json").write_text('{"keep":true}\n', encoding="utf-8")
+    (src / "_N225.json").write_text(
+        json.dumps(_chart_payload("^N225", [1, 2, 3], [100.0, 101.0, 102.0])),
+        encoding="utf-8",
+    )
+    (src / "7203.T.json").write_text(
+        json.dumps(_chart_payload("7203.T", [1, 2, 3], [10.0, None, 12.0])),
+        encoding="utf-8",
+    )
+    universe = {
+        "marketSymbol": "^N225",
+        "stocks": [{"yahooSymbol": "7203.T", "ticker": "7203", "companyName": "Toyota"}],
+    }
+    assert compact_chart_dir(src, dst, universe=universe, align=True) == 0
+    assert not (dst / "null_close.json").exists()
+    toyota = json.loads((dst / "7203.T.json").read_text(encoding="utf-8"))
+    assert toyota["chart"]["result"][0]["timestamp"] == [1, 3]
+    assert toyota["chart"]["result"][0]["indicators"]["quote"][0]["close"] == pytest.approx([10.0, 12.0])
+    missing = compact_chart_dir(tmp_path / "empty", dst, universe=universe)
+    assert missing == 1
 
 
 def test_stooq_csv_parse_and_returns():
