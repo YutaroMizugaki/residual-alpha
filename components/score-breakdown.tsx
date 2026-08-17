@@ -17,6 +17,24 @@ export function ScoreBreakdown({
     { label: "Risk", score: riskScore, max: 20, color: "bg-amber-700" },
   ];
 
+  if (
+    valuationScore === null &&
+    qualityScore === null &&
+    riskScore === null &&
+    totalScore === null
+  ) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold tracking-wide text-slate-700 uppercase">
+          Score breakdown
+        </h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Score is unavailable. Missing inputs are not treated as zero points.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-4 flex items-baseline justify-between">
