@@ -1,0 +1,10 @@
+{
+  "source": "fixture",
+  "sourceLabel": "Fixture Data",
+  "priceSource": "fixture",
+  "fundamentalsSource": "fixture",
+  "marketSymbol": null,
+  "asOfDate": null,
+  "disclaimerJa": "現在表示している銘柄および数値はテスト用fixtureです。",
+  "disclaimerEn": "Test data only. Tickers and figures are fictional, not live market prices."
+}

@@ -1,0 +1,33 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "JPY",
+          "symbol": "NULL.T",
+          "gmtoffset": 32400,
+          "timezone": "JST"
+        },
+        "timestamp": [
+          1704067200,
+          1704153600,
+          1704240000,
+          1704326400
+        ],
+        "indicators": {
+          "quote": [
+            {
+              "close": [
+                1000.0,
+                null,
+                1100.0,
+                1089.0
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}

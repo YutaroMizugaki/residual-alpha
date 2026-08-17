@@ -2,6 +2,7 @@
   "ticker": "1004",
   "companyName": "High Beta Growth",
   "price": 1600.0,
+  "priceAsOf": null,
   "betaRaw": 2.5,
   "betaAdjusted": 2.0,
   "betaStatus": "valid",

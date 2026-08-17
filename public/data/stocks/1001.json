@@ -2,6 +2,7 @@
   "ticker": "1001",
   "companyName": "Alpha Manufacturing",
   "price": 1000.0,
+  "priceAsOf": null,
   "betaRaw": 0.7,
   "betaAdjusted": 0.799,
   "betaStatus": "valid",

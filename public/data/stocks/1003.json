@@ -2,6 +2,7 @@
   "ticker": "1003",
   "companyName": "Cheap Value",
   "price": 480.0,
+  "priceAsOf": null,
   "betaRaw": 0.95,
   "betaAdjusted": 0.9665,
   "betaStatus": "valid",

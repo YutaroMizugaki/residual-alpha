@@ -83,6 +83,10 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
     latest_roe, roe_reason = optional_number(stock.get("latestRoe"), "roe")
     roe_history = _optional_float_list(stock.get("roeHistory"))
     stock_returns = _optional_float_list(stock.get("stockReturns"))
+    market_returns = _optional_float_list(stock.get("marketReturns"))
+    if market_returns is None:
+        market_returns = _optional_float_list(assumptions.get("marketReturns"))
+    price_as_of = stock.get("priceAsOf")
 
     beta_raw = None
     beta_adjusted = None
@@ -190,6 +194,7 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
         "eligible": eligible,
         "exclusionReasons": unique_reasons,
         "price": price,
+        "priceAsOf": price_as_of if isinstance(price_as_of, str) else None,
         "bookValue": book_value,
         "sharesOutstanding": shares,
         "betaRaw": beta_raw,
@@ -278,6 +283,7 @@ def detail_row(stock: dict) -> dict:
         "ticker": stock["ticker"],
         "companyName": stock["companyName"],
         "price": _round(stock["price"], 4),
+        "priceAsOf": stock.get("priceAsOf"),
         "betaRaw": _round(stock["betaRaw"], 8),
         "betaAdjusted": _round(stock["betaAdjusted"], 8),
         "betaStatus": stock["betaStatus"],

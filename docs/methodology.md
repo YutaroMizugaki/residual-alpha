@@ -4,6 +4,8 @@ Rates are decimals (`6.5% = 0.065`). Missing financials are never replaced with 
 
 Missing-metric scoring: weights of available metrics in the same category are redistributed proportionally. A missing P/B discount does not become 0 points inside Valuation. If an entire category cannot be scored, the stock is not score-eligible.
 
+Input snapshots come from a provider (`fixture` by default, optional `free` prices). See `docs/providers.md`. The formulas below do not change by source.
+
 ## Raw Beta
 
 ```text

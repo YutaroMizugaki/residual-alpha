@@ -2,6 +2,7 @@
   "ticker": "1006",
   "companyName": "Missing Data",
   "price": null,
+  "priceAsOf": null,
   "betaRaw": null,
   "betaAdjusted": null,
   "betaStatus": "missing",
