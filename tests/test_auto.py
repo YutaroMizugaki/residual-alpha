@@ -462,6 +462,9 @@ def test_ineligible_extra_prices_do_not_change_core_scores(tmp_path: Path):
     fund_dir = tmp_path / "fund"
     for name in ("7203.T.json", "6758.T.json", "9984.T.json"):
         _copy_tree(FUND_DIR / name, fund_dir / name)
+    jq_core = tmp_path / "jq_core"
+    for name in ("72030.json", "67580.json", "99840.json"):
+        _copy_tree(JQUANTS_DIR / name, jq_core / name)
     three = load_auto_snapshot(
         universe_path=_mini_universe(
             tmp_path / "universe.json",
@@ -469,14 +472,16 @@ def test_ineligible_extra_prices_do_not_change_core_scores(tmp_path: Path):
         ),
         raw_dir=YAHOO_DIR,
         fundamentals_dir=fund_dir,
-        jquants_dir=JQUANTS_DIR,
+        jquants_dir=jq_core,
+        jquants_bars_dir=tmp_path / "no-bars",
         edinet_dir=XBRL_DIR,
         fundamentals_path=overlay,
     )
     ten = load_auto_snapshot(
         raw_dir=YAHOO_DIR,
         fundamentals_dir=fund_dir,
-        jquants_dir=JQUANTS_DIR,
+        jquants_dir=jq_core,
+        jquants_bars_dir=tmp_path / "no-bars",
         edinet_dir=XBRL_DIR,
         fundamentals_path=overlay,
     )

@@ -217,9 +217,37 @@ def test_jquants_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["6861"]["eligible"] is False
     assert by_ticker["6861"]["price"] is not None
     assert by_ticker["6861"]["price"] != 0
-    assert by_ticker["6861"]["bookValue"] is None
+    assert by_ticker["6861"]["bookValue"] is not None
+    assert by_ticker["6861"]["bookValue"] != 0
     assert by_ticker["6861"]["priceSource"] == "yahoo_chart"
-    assert by_ticker["6861"]["fundamentalsSource"] is None
+    assert by_ticker["6861"]["fundamentalsSource"] == "jquants_summary"
+    assert by_ticker["6861"]["roeCount"] == 1
+    assert "insufficient_roe_history" in by_ticker["6861"]["exclusionReasons"]
+    extras = [row for row in computed if row["ticker"] not in {"7203", "6758", "9984"}]
+    assert len(extras) == 7
+    for row in extras:
+        assert row["eligible"] is False
+        assert row["bookValue"] is not None
+        assert row["bookValue"] != 0
+        assert row["roeCount"] == 1
+        assert "insufficient_roe_history" in row["exclusionReasons"]
+        assert row["fundamentalsSource"] == "jquants_summary"
+
+
+def test_recorded_extra_jquants_fy_is_not_padded():
+    extras = ["68610", "65010", "80350", "40630", "83060", "94320", "60980"]
+    for code in extras:
+        payload = json.loads((JQUANTS_DIR / f"{code}.json").read_text(encoding="utf-8"))
+        fundamentals = parse_jquants_summary(payload, expected_code=code)
+        assert fundamentals.book_value is not None
+        assert fundamentals.book_value != 0
+        assert fundamentals.shares_outstanding is not None
+        assert fundamentals.latest_roe is not None
+        assert fundamentals.roe_history is not None
+        assert len(fundamentals.roe_history) == 1
+        fy_ends = {row.get("CurPerEn") for row in payload["data"] if row.get("NP") not in (None, "")}
+        assert "2025-03-31" in fy_ends or "2025-03-20" in fy_ends
+        assert "2026-03-31" in fy_ends or "2026-03-20" in fy_ends
 
 
 def test_jquants_without_summaries_stays_ineligible(tmp_path: Path):
