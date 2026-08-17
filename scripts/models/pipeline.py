@@ -95,8 +95,8 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
     market_returns = _optional_float_list(stock.get("marketReturns"))
     if market_returns is None:
         market_returns = _optional_float_list(assumptions.get("marketReturns"))
-    price_as_of = stock.get("priceAsOf")
-    fundamentals_as_of = stock.get("fundamentalsAsOf")
+    price_as_of = optional_source_label(stock.get("priceAsOf"))
+    fundamentals_as_of = optional_source_label(stock.get("fundamentalsAsOf"))
     price_source = optional_source_label(stock.get("priceSource"))
     fundamentals_source = optional_source_label(stock.get("fundamentalsSource"))
     return_count = None if stock_returns is None else len(stock_returns)
@@ -207,9 +207,9 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
         "eligible": eligible,
         "exclusionReasons": unique_reasons,
         "price": price,
-        "priceAsOf": price_as_of if isinstance(price_as_of, str) else None,
+        "priceAsOf": price_as_of,
         "priceSource": price_source,
-        "fundamentalsAsOf": fundamentals_as_of if isinstance(fundamentals_as_of, str) else None,
+        "fundamentalsAsOf": fundamentals_as_of,
         "fundamentalsSource": fundamentals_source,
         "bookValue": book_value,
         "sharesOutstanding": shares,
@@ -260,6 +260,7 @@ def ranking_row(stock: dict) -> dict:
         "ticker": stock["ticker"],
         "companyName": stock["companyName"],
         "price": _round(stock["price"], 4),
+        "priceAsOf": stock.get("priceAsOf"),
         "intrinsicPrice": _round(stock["intrinsicPrice"], 4),
         "intrinsicUpside": _round(stock["intrinsicUpside"], 8),
         "betaAdjusted": _round(stock["betaAdjusted"], 8),
@@ -274,6 +275,7 @@ def ranking_row(stock: dict) -> dict:
         "eligible": stock["eligible"],
         "exclusionReasons": stock["exclusionReasons"],
         "priceSource": stock.get("priceSource"),
+        "fundamentalsAsOf": stock.get("fundamentalsAsOf"),
         "fundamentalsSource": stock.get("fundamentalsSource"),
     }
 

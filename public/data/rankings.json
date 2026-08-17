@@ -4,6 +4,7 @@
     "ticker": "1001",
     "companyName": "Alpha Manufacturing",
     "price": 1000.0,
+    "priceAsOf": null,
     "intrinsicPrice": 1742.2219,
     "intrinsicUpside": 0.74222194,
     "betaAdjusted": 0.799,
@@ -18,6 +19,7 @@
     "eligible": true,
     "exclusionReasons": [],
     "priceSource": "fixture",
+    "fundamentalsAsOf": null,
     "fundamentalsSource": "fixture"
   },
   {
@@ -25,6 +27,7 @@
     "ticker": "1003",
     "companyName": "Cheap Value",
     "price": 480.0,
+    "priceAsOf": null,
     "intrinsicPrice": 1198.9691,
     "intrinsicUpside": 1.4978523,
     "betaAdjusted": 0.9665,
@@ -39,6 +42,7 @@
     "eligible": true,
     "exclusionReasons": [],
     "priceSource": "fixture",
+    "fundamentalsAsOf": null,
     "fundamentalsSource": "fixture"
   },
   {
@@ -46,6 +50,7 @@
     "ticker": "1002",
     "companyName": "Stable Industries",
     "price": 1000.0,
+    "priceAsOf": null,
     "intrinsicPrice": 1000.0,
     "intrinsicUpside": 0.0,
     "betaAdjusted": 1.0,
@@ -60,6 +65,7 @@
     "eligible": true,
     "exclusionReasons": [],
     "priceSource": "fixture",
+    "fundamentalsAsOf": null,
     "fundamentalsSource": "fixture"
   },
   {
@@ -67,6 +73,7 @@
     "ticker": "1004",
     "companyName": "High Beta Growth",
     "price": 1600.0,
+    "priceAsOf": null,
     "intrinsicPrice": 1551.8327,
     "intrinsicUpside": -0.03010458,
     "betaAdjusted": 2.0,
@@ -81,6 +88,7 @@
     "eligible": true,
     "exclusionReasons": [],
     "priceSource": "fixture",
+    "fundamentalsAsOf": null,
     "fundamentalsSource": "fixture"
   },
   {
@@ -88,6 +96,7 @@
     "ticker": "1005",
     "companyName": "Weak ROE",
     "price": 900.0,
+    "priceAsOf": null,
     "intrinsicPrice": 811.8592,
     "intrinsicUpside": -0.09793425,
     "betaAdjusted": 1.067,
@@ -102,6 +111,7 @@
     "eligible": true,
     "exclusionReasons": [],
     "priceSource": "fixture",
+    "fundamentalsAsOf": null,
     "fundamentalsSource": "fixture"
   },
   {
@@ -109,6 +119,7 @@
     "ticker": "1006",
     "companyName": "Missing Data",
     "price": null,
+    "priceAsOf": null,
     "intrinsicPrice": null,
     "intrinsicUpside": null,
     "betaAdjusted": null,
@@ -129,6 +140,7 @@
       "missing_roe"
     ],
     "priceSource": "fixture",
+    "fundamentalsAsOf": null,
     "fundamentalsSource": "fixture"
   }
 ]

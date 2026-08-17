@@ -54,7 +54,7 @@ No trading
 - `scripts/fetch_edinet_xbrl.py` — optional EDINET yuho XBRL zip download
 - `scripts/providers/universe.json` — 10 listed names for non-fixture sources
 - `tests/` — pytest (no live network)
-- `app/`, `components/`, `lib/` — Next.js display only
+- `app/`, `components/`, `lib/` — Next.js display only. Ranking JSON includes per-name sources, `returnCount`, `priceAsOf`, and `fundamentalsAsOf`.
 
 ## Units
 

@@ -18,6 +18,7 @@ RANKING_FIELDS = [
     "ticker",
     "companyName",
     "price",
+    "priceAsOf",
     "intrinsicPrice",
     "intrinsicUpside",
     "betaAdjusted",
@@ -30,6 +31,7 @@ RANKING_FIELDS = [
     "riskScore",
     "totalScore",
     "priceSource",
+    "fundamentalsAsOf",
     "fundamentalsSource",
 ]
 
@@ -125,6 +127,8 @@ def test_public_json_matches_engine_and_schema():
             assert field in row
         assert row["priceSource"] == "fixture"
         assert row["fundamentalsSource"] == "fixture"
+        assert row["priceAsOf"] is None
+        assert row["fundamentalsAsOf"] is None
         if row["ticker"] == "1006":
             assert row["returnCount"] is None
         else:
@@ -151,17 +155,29 @@ def test_evaluate_stock_passes_per_name_sources():
     stock = dict(fixtures["stocks"][0])
     stock["priceSource"] = "jquants_bars"
     stock["fundamentalsSource"] = "edinet_xbrl"
+    stock["priceAsOf"] = "2026-08-17"
+    stock["fundamentalsAsOf"] = "2026-03-31"
     row = evaluate_universe([stock], fixtures["assumptions"])[0]
     assert row["priceSource"] == "jquants_bars"
     assert row["fundamentalsSource"] == "edinet_xbrl"
+    assert row["priceAsOf"] == "2026-08-17"
+    assert row["fundamentalsAsOf"] == "2026-03-31"
     detail = detail_row(row)
     assert detail["priceSource"] == "jquants_bars"
     assert detail["fundamentalsSource"] == "edinet_xbrl"
+    assert detail["priceAsOf"] == "2026-08-17"
+    assert detail["fundamentalsAsOf"] == "2026-03-31"
     ranked = ranking_row(row)
     assert ranked["priceSource"] == "jquants_bars"
     assert ranked["fundamentalsSource"] == "edinet_xbrl"
+    assert ranked["priceAsOf"] == "2026-08-17"
+    assert ranked["fundamentalsAsOf"] == "2026-03-31"
     stock["priceSource"] = "  "
     stock["fundamentalsSource"] = ""
+    stock["priceAsOf"] = "  "
+    stock["fundamentalsAsOf"] = ""
     blank = evaluate_universe([stock], fixtures["assumptions"])[0]
     assert blank["priceSource"] is None
     assert blank["fundamentalsSource"] is None
+    assert blank["priceAsOf"] is None
+    assert blank["fundamentalsAsOf"] is None

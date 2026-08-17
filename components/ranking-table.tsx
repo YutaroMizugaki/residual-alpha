@@ -114,6 +114,11 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatPrice(row.price)}
+                    {row.priceAsOf ? (
+                      <span className="block text-xs font-normal text-slate-500">
+                        as of {row.priceAsOf}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatPrice(row.intrinsicPrice)}
@@ -134,6 +139,11 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatPercent(row.normalizedRoe)}
+                    {row.fundamentalsAsOf ? (
+                      <span className="block text-xs font-normal text-slate-500">
+                        FY {row.fundamentalsAsOf}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatPercent(row.excessRoe, { signed: true })}

@@ -16,7 +16,7 @@ export default async function RankingPage() {
         share.
         {isFixture
           ? " Fictional issuers only."
-          : ` Universe mix: ${meta.priceSource} / ${meta.fundamentalsSource}. Each row shows that name's sources.`}
+          : ` Universe mix: ${meta.priceSource} / ${meta.fundamentalsSource}. Each row shows that name's sources and as-of dates.`}
       </p>
       <div className="mt-6">
         <RankingTable rows={rows} />

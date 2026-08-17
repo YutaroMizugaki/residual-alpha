@@ -5,6 +5,7 @@ export type RankingRow = {
   ticker: string;
   companyName: string;
   price: number | null;
+  priceAsOf?: string | null;
   intrinsicPrice: number | null;
   intrinsicUpside: number | null;
   betaAdjusted: number | null;
@@ -19,6 +20,7 @@ export type RankingRow = {
   eligible: boolean;
   exclusionReasons: ExclusionReason[];
   priceSource?: string | null;
+  fundamentalsAsOf?: string | null;
   fundamentalsSource?: string | null;
 };
 

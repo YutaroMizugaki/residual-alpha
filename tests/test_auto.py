@@ -275,6 +275,9 @@ def test_auto_mixed_sources_across_names(tmp_path: Path):
     assert by_rank["6758"]["fundamentalsSource"] == "jquants_summary"
     assert by_rank["9984"]["fundamentalsSource"] == "yahoo_timeseries"
     assert by_rank["7203"]["fundamentalsSource"] != snapshot.fundamentals_source
+    assert by_rank["7203"]["fundamentalsAsOf"] == "2026-03-31"
+    assert by_rank["6758"]["fundamentalsAsOf"] == "2026-03-31"
+    assert by_rank["9984"]["fundamentalsAsOf"] == "2026-03-31"
 
 
 def test_auto_does_not_mix_sources_inside_one_name(tmp_path: Path):
@@ -346,10 +349,18 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         assert by_ticker[ticker]["price"] is not None
         assert by_ticker[ticker]["priceSource"] == "yahoo_chart"
         assert by_ticker[ticker]["returnCount"] >= 199
+        assert by_ticker[ticker]["priceAsOf"] is not None
+        listed = ranking_row(by_ticker[ticker])
+        assert listed["priceAsOf"] == by_ticker[ticker]["priceAsOf"]
+        assert listed["fundamentalsAsOf"] == by_ticker[ticker]["fundamentalsAsOf"]
+        assert listed["priceAsOf"] is not None
+        assert listed["fundamentalsAsOf"] is not None
     for ticker in CORE:
         assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
+    assert by_ticker["7203"]["priceAsOf"] == "2026-08-17"
+    assert by_ticker["7203"]["fundamentalsAsOf"] == "2026-03-31"
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)
     assert "edinet_xbrl" in snapshot.fundamentals_source
     assert "yahoo_timeseries" in snapshot.fundamentals_source
@@ -390,6 +401,8 @@ def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
         assert listed["priceSource"] is None
         assert listed["fundamentalsSource"] is None
         assert listed["returnCount"] is None
+        assert listed["priceAsOf"] is None
+        assert listed["fundamentalsAsOf"] is None
         assert "missing_book_value" in by_ticker[ticker]["exclusionReasons"]
         assert "missing_price" in by_ticker[ticker]["exclusionReasons"]
 
