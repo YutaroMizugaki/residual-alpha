@@ -571,3 +571,40 @@ def test_compact_jquants_dir_universe_only(tmp_path: Path):
         universe=universe,
     )
     assert missing == 1
+    extra = {
+        "marketSymbol": "^N225",
+        "stocks": universe["stocks"]
+        + [
+            {
+                "ticker": "6861",
+                "yahooSymbol": "6861.T",
+                "jquantsCode": "68610",
+                "companyName": "Keyence",
+            }
+        ],
+    }
+    existing_dst_s = tmp_path / "existing_summaries"
+    existing_dst_b = tmp_path / "existing_bars"
+    assert (
+        compact_jquants_dir(
+            summaries_src,
+            bars_src,
+            existing_dst_s,
+            existing_dst_b,
+            universe=extra,
+            existing_only=True,
+        )
+        == 0
+    )
+    assert (existing_dst_s / "72030.json").exists()
+    assert not (existing_dst_s / "68610.json").exists()
+    assert not (existing_dst_b / "empty_adjc.json").exists()
+    empty_only = compact_jquants_dir(
+        tmp_path / "empty",
+        tmp_path / "empty",
+        existing_dst_s,
+        existing_dst_b,
+        universe=extra,
+        existing_only=True,
+    )
+    assert empty_only == 1

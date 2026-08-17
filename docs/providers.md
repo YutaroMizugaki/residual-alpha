@@ -95,6 +95,7 @@ python scripts/build_public_data.py --source jquants
 python scripts/compact_jquants_caches.py \
   --src-summaries data/raw/jquants --src-bars data/raw/jquants_bars \
   --dst-summaries tests/data/jquants --dst-bars tests/data/jquants_bars
+# --existing-only skips names with no cache; it does not invent missing names
 
 # EDINET list then yuho XBRL zips (network; needs EDINET_API_KEY; not run in CI)
 python scripts/fetch_edinet_list.py --date 2026-05-08
@@ -139,8 +140,9 @@ with 0). `scripts/compact_yahoo_charts.py --align` writes that compact form
 from a live Yahoo chart dump; it does not fetch and does not write
 `public/data`. J-Quants summaries, daily bars, and EDINET XBRL still cover Toyota,
 Sony, and SoftBank. `scripts/compact_jquants_caches.py` writes FY rows and
-AdjC-only bars from a live dump; it does not fetch and does not write
-`public/data`. Recorded J-Quants bars are the recent window. `--source
+AdjC-only bars from a live dump; `--existing-only` skips names with no cache
+instead of failing. It does not fetch, does not invent missing names, and
+does not write `public/data`. Recorded J-Quants bars are the recent window. `--source
 auto` prefers the longer complete Yahoo series when bars are shorter;
 `--source jquants` still uses those bars first. Names without a keyed cache
 fall through to Yahoo in `--source auto`, or stay ranking-ineligible on

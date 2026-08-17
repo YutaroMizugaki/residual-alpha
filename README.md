@@ -87,7 +87,9 @@ python scripts/compact_jquants_caches.py \
   --dst-summaries tests/data/jquants --dst-bars tests/data/jquants_bars
 ```
 
-The compact script does not fetch, does not write `public/data`, and is not CI.
+`--existing-only` skips universe names that have no cache. It does not
+invent the missing names. The compact script does not fetch, does not
+write `public/data`, and is not CI.
 
 ```bash
 # document list (needs EDINET_API_KEY)

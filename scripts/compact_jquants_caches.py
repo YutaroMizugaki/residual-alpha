@@ -44,6 +44,7 @@ def compact_jquants_dir(
     *,
     universe: dict,
     dry_run: bool = False,
+    existing_only: bool = False,
 ) -> int:
     """Compact universe J-Quants caches only. Does not touch public/data or live fetch."""
     pending: list[tuple[str, dict, dict]] = []
@@ -52,12 +53,12 @@ def compact_jquants_dir(
         name = cache_filename(code)
         summary_path = summaries_src / name
         bars_path = bars_src / name
-        if not summary_path.exists():
-            print(f"FAIL missing {summary_path}")
-            failed += 1
-            continue
-        if not bars_path.exists():
-            print(f"FAIL missing {bars_path}")
+        if not summary_path.exists() or not bars_path.exists():
+            missing = summary_path if not summary_path.exists() else bars_path
+            if existing_only:
+                print(f"SKIP missing {missing}")
+                continue
+            print(f"FAIL missing {missing}")
             failed += 1
             continue
         try:
@@ -71,6 +72,9 @@ def compact_jquants_dir(
             continue
         pending.append((name, summary, bars))
     if failed:
+        return 1
+    if not pending:
+        print("FAIL no universe J-Quants caches to compact")
         return 1
     for name, summary, bars in pending:
         summary_out = summaries_dst / name
@@ -110,6 +114,11 @@ def main() -> int:
     )
     parser.add_argument("--universe", default=str(ROOT / "scripts" / "providers" / "universe.json"))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--existing-only",
+        action="store_true",
+        help="Skip universe names with no cache instead of failing. Does not invent missing names.",
+    )
     args = parser.parse_args()
     try:
         universe = load_universe(Path(args.universe))
@@ -127,6 +136,7 @@ def main() -> int:
         bars_dst,
         universe=universe,
         dry_run=args.dry_run,
+        existing_only=args.existing_only,
     )
 
 
