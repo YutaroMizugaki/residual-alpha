@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 from providers.errors import BotWallError, FetchError
 
 Fetcher = Callable[[str], tuple[int, str, str]]
+BinaryFetcher = Callable[[str], tuple[int, str, bytes]]
 
 DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 residual-alpha free-data-provider",
@@ -20,6 +21,7 @@ DEFAULT_HEADERS = {
 
 JQUANTS_SUMMARY_URL = "https://api.jquants.com/v2/fins/summary"
 EDINET_DOCUMENTS_URL = "https://api.edinet-fsa.go.jp/api/v2/documents.json"
+EDINET_DOCUMENT_BASE = "https://api.edinet-fsa.go.jp/api/v2/documents"
 
 
 def redact_url(url: str) -> str:
@@ -197,8 +199,8 @@ def fetch_edinet_documents_json(
     fetcher: Fetcher | None = None,
 ) -> dict:
     """
-    Live calls need EDINET_API_KEY. XBRL zips are not downloaded.
-    Injected fetchers skip the key so CI can use recorded payloads.
+    Live calls need EDINET_API_KEY. Injected fetchers skip the key so CI
+    can use recorded payloads. This helper does not download XBRL zips.
     """
     if fetcher is None:
         key = api_key if api_key is not None else os.environ.get("EDINET_API_KEY")
@@ -215,3 +217,54 @@ def fetch_edinet_documents_json(
         raise FetchError(f"EDINET HTTP {status}")
     reject_html(body, content_type)
     return _parse_json_body(body, label="EDINET documents")
+
+
+def default_binary_fetcher(url: str) -> tuple[int, str, bytes]:
+    request = Request(url, headers=DEFAULT_HEADERS)
+    try:
+        with urlopen(request, timeout=60) as response:
+            status = int(getattr(response, "status", 200))
+            content_type = str(response.headers.get("Content-Type") or "")
+            body = response.read()
+            return status, content_type, body
+    except FetchError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — network failures become FetchError
+        raise FetchError(f"request failed: {redact_url(url)}") from exc
+
+
+def edinet_xbrl_url(doc_id: str, *, api_key: str | None = None) -> str:
+    query = {"type": "1"}
+    if api_key:
+        query["Subscription-Key"] = api_key
+    return f"{EDINET_DOCUMENT_BASE}/{quote(doc_id)}?{urlencode(query)}"
+
+
+def _looks_like_html_bytes(data: bytes) -> bool:
+    sniff = data.lstrip()[:80].lower()
+    return sniff.startswith(b"<!doctype") or sniff.startswith(b"<html")
+
+
+def fetch_edinet_xbrl_zip(
+    doc_id: str,
+    *,
+    api_key: str | None = None,
+    fetcher: BinaryFetcher | None = None,
+) -> bytes:
+    """Download yuho XBRL zip (type=1). Live calls need EDINET_API_KEY."""
+    if fetcher is None:
+        key = api_key if api_key is not None else os.environ.get("EDINET_API_KEY")
+        if not key:
+            raise FetchError("EDINET_API_KEY is not set")
+        url = edinet_xbrl_url(doc_id, api_key=key)
+        status, content_type, body = default_binary_fetcher(url)
+    else:
+        url = edinet_xbrl_url(doc_id)
+        status, content_type, body = fetcher(url)
+    if status in (401, 403):
+        raise FetchError(f"EDINET HTTP {status}")
+    if status != 200:
+        raise FetchError(f"EDINET HTTP {status}")
+    if "text/html" in content_type.lower() or _looks_like_html_bytes(body):
+        raise BotWallError("EDINET XBRL returned HTML instead of a zip")
+    return body

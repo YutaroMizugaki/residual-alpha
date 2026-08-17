@@ -15,6 +15,7 @@ if str(SCRIPTS) not in sys.path:
 
 from models.pipeline import detail_row, evaluate_universe, ranking_row  # noqa: E402
 from providers.loader import (  # noqa: E402
+    load_edinet_snapshot,
     load_fixture_snapshot,
     load_free_snapshot,
     load_jquants_snapshot,
@@ -34,13 +35,14 @@ def write_json(path: Path, payload: object) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", choices=("fixture", "free", "jquants"), default="fixture")
+    parser.add_argument("--source", choices=("fixture", "free", "jquants", "edinet"), default="fixture")
     parser.add_argument("--raw-dir", default=str(ROOT / "data" / "raw" / "yahoo"))
     parser.add_argument(
         "--fundamentals-dir",
         default=str(ROOT / "data" / "raw" / "yahoo_fundamentals"),
     )
     parser.add_argument("--jquants-dir", default=str(ROOT / "data" / "raw" / "jquants"))
+    parser.add_argument("--edinet-dir", default=str(ROOT / "data" / "raw" / "edinet_xbrl"))
     parser.add_argument(
         "--fetch",
         action="store_true",
@@ -56,11 +58,16 @@ def main() -> int:
             fundamentals_dir=Path(args.fundamentals_dir),
             fetch=args.fetch,
         )
-    else:
+    elif args.source == "jquants":
         snapshot = load_jquants_snapshot(
             raw_dir=Path(args.raw_dir),
             jquants_dir=Path(args.jquants_dir),
             fetch=args.fetch,
+        )
+    else:
+        snapshot = load_edinet_snapshot(
+            raw_dir=Path(args.raw_dir),
+            edinet_dir=Path(args.edinet_dir),
         )
 
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)

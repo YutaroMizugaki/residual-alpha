@@ -2,9 +2,9 @@
 
 Residual-income ranking. Python computes valuation; Next.js displays static JSON.
 
-**Current status:** Fixture MVP + Free Data Provider (Yahoo) + keyed J-Quants FY summaries.
+**Current status:** Fixture MVP + Free Data Provider (Yahoo) + keyed J-Quants FY summaries + EDINET yuho XBRL.
 
-Displayed data follows `public/data/meta.json`. The committed site is fixture data (fictional tickers). Free and J-Quants sources are opt-in and not used by CI.
+Displayed data follows `public/data/meta.json`. The committed site is fixture data (fictional tickers). Free, J-Quants, and EDINET sources are opt-in and not used by CI.
 
 ## Architecture
 
@@ -59,11 +59,21 @@ python scripts/build_public_data.py --source jquants
 ```
 
 Prices still come from cached Yahoo charts. Fundamentals come from J-Quants
-FY summary rows. EDINET XBRL is not parsed.
+FY summary rows.
 
 ```bash
-# document list only (needs EDINET_API_KEY)
+# document list (needs EDINET_API_KEY)
 python scripts/fetch_edinet_list.py --date 2026-05-08
+```
+
+## EDINET XBRL (optional, not CI)
+
+Needs `EDINET_API_KEY` to download zips. Do not commit the key. Discovery uses
+cached document lists; this repo does not crawl every filing date.
+
+```bash
+python scripts/fetch_edinet_xbrl.py
+python scripts/build_public_data.py --source edinet
 ```
 
 ## Run frontend

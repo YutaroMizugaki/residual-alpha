@@ -1,4 +1,4 @@
-"""EDINET API v2 document list. No XBRL parsing in this phase."""
+"""EDINET API v2 document list. XBRL instances are parsed separately."""
 
 from __future__ import annotations
 
@@ -88,3 +88,26 @@ def latest_yuho(documents: list[EdinetDocument], sec_code: str) -> EdinetDocumen
         return None
     matches.sort(key=lambda doc: (doc.period_end or "", doc.doc_id))
     return matches[-1]
+
+
+def yuho_history(
+    documents: list[EdinetDocument],
+    sec_code: str,
+    *,
+    limit: int = 5,
+) -> list[EdinetDocument]:
+    """Latest unique fiscal-year-end yuho filings that advertise XBRL."""
+    wanted = _normalize_sec_code(sec_code)
+    matches = [
+        doc
+        for doc in documents
+        if doc.sec_code == wanted
+        and doc.doc_type_code == YUHO_TYPE
+        and doc.xbrl_flag != "0"
+    ]
+    by_period: dict[str, EdinetDocument] = {}
+    for doc in sorted(matches, key=lambda item: (item.period_end or "", item.doc_id)):
+        if doc.period_end:
+            by_period[doc.period_end] = doc
+    ordered = sorted(by_period.values(), key=lambda item: item.period_end or "", reverse=True)
+    return ordered[:limit]

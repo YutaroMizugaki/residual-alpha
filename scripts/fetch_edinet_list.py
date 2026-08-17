@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download EDINET v2 document lists. Needs EDINET_API_KEY. No XBRL. Not used by CI."""
+"""Download EDINET v2 document lists. Needs EDINET_API_KEY. Not used by CI."""
 
 from __future__ import annotations
 

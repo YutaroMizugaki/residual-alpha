@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from providers.edinet import latest_yuho, parse_edinet_documents
+from providers.edinet import latest_yuho, parse_edinet_documents, yuho_history
 from providers.errors import BotWallError, FetchError
 from providers.http import edinet_documents_url, fetch_edinet_documents_json
 
@@ -25,6 +25,15 @@ def test_edinet_parses_yuho_and_strips_quoted_type():
     assert sony is not None
     assert sony.doc_id == "S100CCCC"
     assert sony.doc_type_code == "120"
+
+
+def test_edinet_yuho_history_unique_period_end():
+    payload = json.loads((EDINET_DIR / "documents.json").read_text(encoding="utf-8"))
+    documents = parse_edinet_documents(payload)
+    toyota = yuho_history(documents, "7203")
+    assert [doc.doc_id for doc in toyota] == ["S100AAAA"]
+    sony = yuho_history(documents, "6758")
+    assert [doc.doc_id for doc in sony] == ["S100CCCC"]
 
 
 def test_edinet_unauthorized_json_is_fetch_error():

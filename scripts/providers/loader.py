@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from providers.edinet_xbrl import parse_edinet_xbrl_dir
 from providers.errors import FetchError, ProviderError
 from providers.http import (
     cache_filename,
@@ -100,6 +101,12 @@ def jquants_code(item: dict[str, Any]) -> str:
     if len(ticker) == 4 and ticker.isdigit():
         return ticker + "0"
     return ticker
+
+
+def edinet_sec_code(item: dict[str, Any]) -> str:
+    if item.get("edinetSecCode"):
+        return str(item["edinetSecCode"])
+    return jquants_code(item)
 
 
 def _blank_stock(ticker: str, company_name: str) -> dict[str, Any]:
@@ -275,7 +282,7 @@ def load_jquants_snapshot(
     """
     Prices from Yahoo chart JSON. Fundamentals from J-Quants v2 /fins/summary.
 
-    Live J-Quants calls need JQUANTS_API_KEY. EDINET XBRL is not parsed.
+    Live J-Quants calls need JQUANTS_API_KEY. Use --source edinet for XBRL.
     Missing values are not replaced with 0.
     """
     universe = load_universe(universe_path)
@@ -346,12 +353,107 @@ def load_jquants_snapshot(
         as_of_date=as_of,
         disclaimer_ja=(
             "価格は Yahoo Finance chart、財務は J-Quants 決算短信サマリー（キー必須）です。"
-            "EDINET の XBRL は使いません。欠損は 0 にしません。投資助言ではありません。"
+            "欠損は 0 にしません。投資助言ではありません。"
         ),
         disclaimer_en=(
             "Prices from Yahoo Finance chart; fundamentals from J-Quants FY summary "
-            "(API key required for live fetch). EDINET XBRL is not parsed. Missing "
-            "values are not replaced with 0. Not investment advice."
+            "(API key required for live fetch). Missing values are not replaced "
+            "with 0. Not investment advice."
+        ),
+        assumptions={
+            "riskFreeRate": float(universe["riskFreeRate"]),
+            "equityRiskPremium": float(universe["equityRiskPremium"]),
+            "retentionRatio": float(universe["retentionRatio"]),
+            "marketReturns": None,
+        },
+        stocks=stocks,
+    )
+
+
+def load_edinet_snapshot(
+    *,
+    universe_path: Path = UNIVERSE_PATH,
+    fundamentals_path: Path = FUNDAMENTALS_PATH,
+    raw_dir: Path | None = None,
+    edinet_dir: Path | None = None,
+    fetch: bool = False,
+    range_: str | None = None,
+    fetcher=None,
+) -> DataSnapshot:
+    """
+    Prices from Yahoo chart JSON. Fundamentals from cached EDINET yuho XBRL.
+
+    Live XBRL download is a separate script (EDINET_API_KEY). This loader does
+    not crawl filing dates. Missing values are not replaced with 0.
+    """
+    if fetch:
+        raise FetchError("EDINET snapshot does not fetch XBRL; cache files under --edinet-dir")
+    universe = load_universe(universe_path)
+    overlay_map = load_fundamentals(fundamentals_path)
+    market_symbol = str(universe["marketSymbol"])
+    lookback = range_ or str(universe.get("range", "1y"))
+    raw_dir = raw_dir or (ROOT / "data" / "raw" / "yahoo")
+    edinet_dir = edinet_dir or (ROOT / "data" / "raw" / "edinet_xbrl")
+
+    def load_chart(symbol: str) -> dict[str, Any]:
+        if fetcher is not None:
+            return fetch_yahoo_chart_json(symbol, range_=lookback, fetcher=fetcher)
+        return _payload_from_raw(raw_dir, symbol)
+
+    market_series = parse_yahoo_chart(load_chart(market_symbol), expected_symbol=market_symbol)
+    stocks: list[dict[str, Any]] = []
+    as_of_dates: list[str] = []
+    used_edinet = False
+    used_overlay = False
+
+    for item in universe["stocks"]:
+        ticker = str(item["ticker"])
+        yahoo_symbol = str(item["yahooSymbol"])
+        code = edinet_sec_code(item)
+        stock = _blank_stock(ticker, str(item["companyName"]))
+        _apply_yahoo_prices(
+            stock,
+            yahoo_symbol=yahoo_symbol,
+            load_chart=load_chart,
+            market_series=market_series,
+            as_of_dates=as_of_dates,
+        )
+        try:
+            used = _apply_parsed_fundamentals(stock, parse_edinet_xbrl_dir(edinet_dir / code))
+            if used:
+                used_edinet = True
+        except ProviderError:
+            pass
+        stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
+        if filled:
+            used_overlay = True
+        stocks.append(stock)
+
+    as_of = max(as_of_dates) if as_of_dates else None
+    if used_edinet and used_overlay:
+        fundamentals_source = "edinet_xbrl+manual_overlay"
+    elif used_edinet:
+        fundamentals_source = "edinet_xbrl"
+    elif used_overlay:
+        fundamentals_source = "manual_overlay"
+    else:
+        fundamentals_source = "missing"
+
+    return DataSnapshot(
+        source="edinet",
+        source_label="EDINET XBRL",
+        price_source="yahoo_chart",
+        fundamentals_source=fundamentals_source,
+        market_symbol=market_symbol,
+        as_of_date=as_of,
+        disclaimer_ja=(
+            "価格は Yahoo Finance chart、財務は EDINET 有報 XBRL（キー必須の取得）です。"
+            "欠損は 0 にしません。投資助言ではありません。"
+        ),
+        disclaimer_en=(
+            "Prices from Yahoo Finance chart; fundamentals from EDINET annual "
+            "XBRL (API key required to download). Missing values are not replaced "
+            "with 0. Not investment advice."
         ),
         assumptions={
             "riskFreeRate": float(universe["riskFreeRate"]),
