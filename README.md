@@ -55,6 +55,8 @@ Needs `JQUANTS_API_KEY` for live download. Do not commit the key. The
 **free plan is enough**; a paid Light plan is not required. Free-plan
 daily bars can lag about 12 weeks. That is accepted: each name shows
 `priceAsOf` (the last close actually used). Dates are not filled forward.
+Live fetch clamps the bars window to the plan's covered dates (HTTP 400
+otherwise) and paces requests for the free plan's 5 req/min limit.
 
 ```bash
 python scripts/fetch_jquants_data.py
