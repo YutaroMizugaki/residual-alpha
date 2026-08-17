@@ -1,0 +1,19 @@
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
+## Cursor Cloud specific instructions
+
+`residual-alpha` is a single-repo fixture MVP: a Python quant engine computes valuations and writes static JSON, which a Next.js 16 (App Router, Turbopack, React 19) frontend renders. There is no database, backend API, or live market feed.
+
+- Dependencies are refreshed automatically on startup (`pip install -r requirements.txt` for `numpy`/`pytest`, `npm ci` for the frontend). No manual install is needed.
+- `pytest` is installed to `~/.local/bin`, which is not on `PATH`. Run tests with `python3 -m pytest` (config in `pytest.ini`; sources under `scripts/` via `pythonpath`).
+- Standard commands (see `README.md` / `package.json`): tests `python3 -m pytest`; lint `npm run lint`; build data `python3 scripts/build_public_data.py`; dev server `npm run dev` (serves `http://localhost:3000`, routes `/`, `/ranking`, `/stocks/<ticker>`).
+- The frontend reads `public/data/rankings.json` and `public/data/stocks/*.json`. These are committed, but if you change the Python engine or fixtures (`scripts/`), re-run `python3 scripts/build_public_data.py` to regenerate them before viewing the UI.
+- Running `npm run dev` (or `next build`) regenerates `AGENTS.md` and `CLAUDE.md` via Next.js (`next.config.ts` `agentRules`). If they show as modified, commit them with your work to keep the tree clean; do not delete the `nextjs-agent-rules` block.
