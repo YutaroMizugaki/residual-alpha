@@ -12,7 +12,7 @@
     "Auto source prices: J-Quants daily AdjC, then Yahoo chart. Market is Nikkei 225.",
     "Auto source fundamentals: EDINET XBRL, then J-Quants FY summary, then Yahoo timeseries.",
     "Names without cached financials stay ranking-ineligible. Missing is not 0.",
-    "Recorded Yahoo chart/timeseries cover all 10 names. J-Quants and EDINET caches cover 7203, 6758, 9984."
+    "Recorded Yahoo chart/timeseries cover all 10 names (~1y daily closes aligned to Nikkei 225). J-Quants and EDINET caches cover 7203, 6758, 9984."
   ],
   "stocks": [
     {

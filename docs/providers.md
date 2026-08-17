@@ -111,10 +111,14 @@ script. It does not crawl EDINET filing dates. Run
 `fetch_edinet_list.py --date YYYY-MM-DD` first if you need new yuho zips.
 
 The listed-name universe in `scripts/providers/universe.json` has 10 tickers.
-Recorded Yahoo chart and annual timeseries cover all 10. J-Quants summaries,
-daily bars, and EDINET XBRL still cover Toyota, Sony, and SoftBank. Names
-without a keyed cache fall through to Yahoo in `--source auto`, or stay
-ranking-ineligible on `--source jquants` / `--source edinet`. Missing is not 0.
+Recorded Yahoo chart and annual timeseries cover all 10. Charts are ~1y of
+daily closes, inner-joined to Nikkei 225 (missing days dropped, not filled
+with 0). J-Quants summaries, daily bars, and EDINET XBRL still cover Toyota,
+Sony, and SoftBank. Recorded J-Quants bars are the recent window; `--source
+auto` prefers those complete bars over the longer Yahoo series for those
+three names. Names without a keyed cache fall through to Yahoo in
+`--source auto`, or stay ranking-ineligible on `--source jquants` /
+`--source edinet`. Missing is not 0.
 
 Do not commit API keys. `.env*` is gitignored. Do not commit live
 `public/data` from `--source auto` / `free` / `jquants` / `edinet`; CI rebuilds

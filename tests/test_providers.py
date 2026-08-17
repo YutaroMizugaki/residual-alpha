@@ -30,6 +30,50 @@ def test_yahoo_chart_parses_recorded_toyota():
     assert all(price > 0 for _, price in series.points)
 
 
+def test_yahoo_charts_cover_one_year_aligned_to_nikkei():
+    market = json.loads((YAHOO_DIR / "_N225.json").read_text(encoding="utf-8"))
+    market_ts = [int(x) for x in market["chart"]["result"][0]["timestamp"]]
+    assert len(market_ts) >= 200
+    symbols = [
+        "7203.T",
+        "6758.T",
+        "9984.T",
+        "6861.T",
+        "6501.T",
+        "8035.T",
+        "4063.T",
+        "8306.T",
+        "9432.T",
+        "6098.T",
+    ]
+    expected_last = {
+        "7203.T": 3013.0,
+        "6758.T": 3780.0,
+        "9984.T": 5886.0,
+        "6861.T": 86750.0,
+        "6501.T": 5571.0,
+        "8035.T": 60090.0,
+        "4063.T": 6385.0,
+        "8306.T": 3649.0,
+        "9432.T": 161.5,
+        "6098.T": 16380.0,
+    }
+    for symbol in symbols:
+        payload = json.loads((YAHOO_DIR / f"{symbol}.json").read_text(encoding="utf-8"))
+        result = payload["chart"]["result"][0]
+        ts = [int(x) for x in result["timestamp"]]
+        closes = result["indicators"]["quote"][0]["close"]
+        assert ts == market_ts
+        assert None not in closes
+        assert 0 not in closes
+        assert closes[-1] == pytest.approx(expected_last[symbol])
+        series = parse_yahoo_chart(payload, expected_symbol=symbol)
+        market_series = parse_yahoo_chart(market, expected_symbol="^N225")
+        stock_returns, market_returns = aligned_simple_returns(series, market_series)
+        assert len(stock_returns) >= 199
+        assert len(stock_returns) == len(market_returns)
+
+
 def test_yahoo_null_close_not_zero():
     payload = json.loads((YAHOO_DIR / "null_close.json").read_text(encoding="utf-8"))
     series = parse_yahoo_chart(payload)
@@ -110,6 +154,7 @@ def test_free_provider_prices_without_fundamentals_are_not_zero(tmp_path: Path):
     assert toyota["stockReturns"]
     assert toyota["marketReturns"]
     assert len(toyota["stockReturns"]) == len(toyota["marketReturns"])
+    assert len(toyota["stockReturns"]) >= 199
 
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     toyota_eval = next(row for row in computed if row["ticker"] == "7203")
@@ -265,6 +310,8 @@ def test_free_snapshot_with_recorded_fundamentals_ranks(tmp_path: Path):
     assert toyota["fundamentalsAsOf"] == "2026-03-31"
     assert toyota["priceSource"] == "yahoo_chart"
     assert toyota["fundamentalsSource"] == "yahoo_timeseries"
+    raw_toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
+    assert len(raw_toyota["stockReturns"]) >= 199
     assert by_ticker["6861"]["eligible"] is True
     assert by_ticker["6861"]["price"] == pytest.approx(86750.0)
     assert by_ticker["6861"]["priceSource"] == "yahoo_chart"
