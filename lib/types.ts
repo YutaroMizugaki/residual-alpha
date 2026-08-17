@@ -8,6 +8,7 @@ export type RankingRow = {
   intrinsicPrice: number | null;
   intrinsicUpside: number | null;
   betaAdjusted: number | null;
+  returnCount?: number | null;
   costOfEquity: number | null;
   normalizedRoe: number | null;
   excessRoe: number | null;
@@ -45,6 +46,7 @@ export type StockDetail = {
   betaRaw: number | null;
   betaAdjusted: number | null;
   betaStatus: string;
+  returnCount?: number | null;
   riskFreeRate: number | null;
   equityRiskPremium: number | null;
   costOfEquity: number | null;

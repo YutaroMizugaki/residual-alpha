@@ -99,6 +99,7 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
     fundamentals_as_of = stock.get("fundamentalsAsOf")
     price_source = optional_source_label(stock.get("priceSource"))
     fundamentals_source = optional_source_label(stock.get("fundamentalsSource"))
+    return_count = None if stock_returns is None else len(stock_returns)
 
     beta_raw = None
     beta_adjusted = None
@@ -215,6 +216,7 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
         "betaRaw": beta_raw,
         "betaAdjusted": beta_adjusted,
         "betaStatus": beta_status,
+        "returnCount": return_count,
         "riskFreeRate": rf,
         "equityRiskPremium": erp,
         "costOfEquity": cost_of_equity,
@@ -261,6 +263,7 @@ def ranking_row(stock: dict) -> dict:
         "intrinsicPrice": _round(stock["intrinsicPrice"], 4),
         "intrinsicUpside": _round(stock["intrinsicUpside"], 8),
         "betaAdjusted": _round(stock["betaAdjusted"], 8),
+        "returnCount": stock.get("returnCount"),
         "costOfEquity": _round(stock["costOfEquity"], 8),
         "normalizedRoe": _round(stock["normalizedRoe"], 8),
         "excessRoe": _round(stock["excessRoe"], 8),
@@ -307,6 +310,7 @@ def detail_row(stock: dict) -> dict:
         "betaRaw": _round(stock["betaRaw"], 8),
         "betaAdjusted": _round(stock["betaAdjusted"], 8),
         "betaStatus": stock["betaStatus"],
+        "returnCount": stock.get("returnCount"),
         "riskFreeRate": _round(stock["riskFreeRate"], 8),
         "equityRiskPremium": _round(stock["equityRiskPremium"], 8),
         "costOfEquity": _round(stock["costOfEquity"], 8),

@@ -123,6 +123,11 @@ export function RankingTable({ rows }: { rows: RankingRow[] }) {
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatBeta(row.betaAdjusted)}
+                    {row.returnCount != null ? (
+                      <span className="block text-xs font-normal text-slate-500">
+                        {row.returnCount} ret
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {formatPercent(row.costOfEquity)}

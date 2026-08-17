@@ -21,6 +21,7 @@ RANKING_FIELDS = [
     "intrinsicPrice",
     "intrinsicUpside",
     "betaAdjusted",
+    "returnCount",
     "costOfEquity",
     "normalizedRoe",
     "excessRoe",
@@ -72,6 +73,7 @@ def test_fixture_missing_data_not_zero():
     assert missing["betaRaw"] is None
     assert missing["normalizedRoe"] is None
     assert missing["totalScore"] is None
+    assert missing["returnCount"] is None
     assert "missing_book_value" in missing["exclusionReasons"]
     assert 0 not in (
         missing["bookValue"],
@@ -79,6 +81,7 @@ def test_fixture_missing_data_not_zero():
         missing["betaRaw"],
         missing["normalizedRoe"],
         missing["totalScore"],
+        missing["returnCount"],
     )
 
 
@@ -122,6 +125,10 @@ def test_public_json_matches_engine_and_schema():
             assert field in row
         assert row["priceSource"] == "fixture"
         assert row["fundamentalsSource"] == "fixture"
+        if row["ticker"] == "1006":
+            assert row["returnCount"] is None
+        else:
+            assert row["returnCount"] == 24
 
     for row in universe:
         public_detail = json.loads((STOCKS_DIR / f"{row['ticker']}.json").read_text(encoding="utf-8"))

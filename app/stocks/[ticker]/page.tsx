@@ -103,7 +103,9 @@ export default async function StockPage({ params }: PageProps) {
         <MetricCard
           label="Beta (raw / adj)"
           value={`${formatBeta(stock.betaRaw)} / ${formatBeta(stock.betaAdjusted)}`}
-          hint={stock.betaStatus}
+          hint={[stock.betaStatus, stock.returnCount != null ? `${stock.returnCount} aligned returns` : null]
+            .filter(Boolean)
+            .join(" · ")}
         />
         <MetricCard
           label="Cost of Equity"

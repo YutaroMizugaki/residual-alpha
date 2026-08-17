@@ -312,6 +312,7 @@ def test_free_snapshot_with_recorded_fundamentals_ranks(tmp_path: Path):
     assert toyota["fundamentalsSource"] == "yahoo_timeseries"
     raw_toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
     assert len(raw_toyota["stockReturns"]) >= 199
+    assert toyota["returnCount"] >= 199
     assert by_ticker["6861"]["eligible"] is True
     assert by_ticker["6861"]["price"] == pytest.approx(86750.0)
     assert by_ticker["6861"]["priceSource"] == "yahoo_chart"

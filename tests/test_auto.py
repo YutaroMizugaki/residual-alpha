@@ -347,6 +347,10 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
     for ticker in CORE:
         assert by_ticker[ticker]["priceSource"] == "jquants_bars"
         assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
+        assert by_ticker[ticker]["returnCount"] == 19
+    for ticker in EXTRAS:
+        assert by_ticker[ticker]["priceSource"] == "yahoo_chart"
+        assert by_ticker[ticker]["returnCount"] >= 199
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)
@@ -388,6 +392,7 @@ def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
         listed = ranking_row(by_ticker[ticker])
         assert listed["priceSource"] is None
         assert listed["fundamentalsSource"] is None
+        assert listed["returnCount"] is None
         assert "missing_book_value" in by_ticker[ticker]["exclusionReasons"]
         assert "missing_price" in by_ticker[ticker]["exclusionReasons"]
 

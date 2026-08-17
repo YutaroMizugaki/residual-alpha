@@ -84,8 +84,8 @@ XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
 inside one name. Recorded Yahoo charts cover ~1y of daily closes aligned to
 Nikkei 225 for all 10 universe names.
 Stock detail JSON includes per-name `priceSource` and `fundamentalsSource`.
-Ranking JSON includes the same per-name labels. Universe `meta.json` is the
-union across names.
+Ranking JSON includes the same per-name labels plus `returnCount` (aligned
+daily returns used for beta). Universe `meta.json` is the union across names.
 
 ```bash
 python scripts/refresh_public_data.py --dry-run

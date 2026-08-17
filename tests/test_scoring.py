@@ -97,11 +97,13 @@ def test_missing_data_not_zero():
     assert result["intrinsicPrice"] is None
     assert result["priceSource"] is None
     assert result["fundamentalsSource"] is None
+    assert result["returnCount"] is None
     assert 0 not in (
         result["bookValue"],
         result["intrinsicEquityValue"],
         result["betaRaw"],
         result["normalizedRoe"],
+        result["returnCount"],
     )
     with pytest.raises(MissingDataError):
         residual_income_model(None, [0.1] * 10, 0.1)  # type: ignore[arg-type]

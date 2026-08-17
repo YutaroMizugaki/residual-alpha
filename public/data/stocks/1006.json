@@ -9,6 +9,7 @@
   "betaRaw": null,
   "betaAdjusted": null,
   "betaStatus": "missing",
+  "returnCount": null,
   "riskFreeRate": 0.015,
   "equityRiskPremium": 0.05,
   "costOfEquity": null,

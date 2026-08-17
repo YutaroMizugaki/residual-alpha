@@ -12,7 +12,7 @@ Input snapshots come from a provider (`fixture` by default, optional `free` Yaho
 beta_raw = cov(stock, market) / var(market)
 ```
 
-Sample covariance and variance both use `ddof=1`. If market variance is (numerically) zero, the result is invalid — not `0`.
+Sample covariance and variance both use `ddof=1`. If market variance is (numerically) zero, the result is invalid — not `0`. `returnCount` is the number of aligned daily simple returns used for that beta. Missing returns stay missing (`null`), not `0`.
 
 ## Adjusted Beta
 

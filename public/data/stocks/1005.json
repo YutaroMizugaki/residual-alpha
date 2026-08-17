@@ -9,6 +9,7 @@
   "betaRaw": 1.1,
   "betaAdjusted": 1.067,
   "betaStatus": "valid",
+  "returnCount": 24,
   "riskFreeRate": 0.015,
   "equityRiskPremium": 0.05,
   "costOfEquity": 0.06835,
