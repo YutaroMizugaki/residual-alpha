@@ -48,3 +48,6 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+
+# live free-data downloads (recorded tests live under tests/data/)
+/data/raw/

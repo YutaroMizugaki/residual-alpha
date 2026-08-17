@@ -2,6 +2,8 @@
   "ticker": "1002",
   "companyName": "Stable Industries",
   "price": 1000.0,
+  "priceAsOf": null,
+  "fundamentalsAsOf": null,
   "betaRaw": 1.0,
   "betaAdjusted": 1.0,
   "betaStatus": "valid",

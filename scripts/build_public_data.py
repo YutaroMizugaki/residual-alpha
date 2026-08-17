@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -13,16 +14,12 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from models.pipeline import detail_row, evaluate_universe, ranking_row  # noqa: E402
+from providers.loader import load_fixture_snapshot, load_free_snapshot  # noqa: E402
 
-FIXTURE_PATH = ROOT / "scripts" / "fixtures" / "stocks.json"
 PUBLIC_DATA = ROOT / "public" / "data"
 RANKINGS_PATH = PUBLIC_DATA / "rankings.json"
 STOCKS_DIR = PUBLIC_DATA / "stocks"
-
-
-def load_fixtures() -> dict:
-    with FIXTURE_PATH.open(encoding="utf-8") as handle:
-        return json.load(handle)
+META_PATH = PUBLIC_DATA / "meta.json"
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -32,10 +29,26 @@ def write_json(path: Path, payload: object) -> None:
 
 
 def main() -> int:
-    fixtures = load_fixtures()
-    assumptions = fixtures["assumptions"]
-    computed = evaluate_universe(fixtures["stocks"], assumptions)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", choices=("fixture", "free"), default="fixture")
+    parser.add_argument("--raw-dir", default=str(ROOT / "data" / "raw" / "yahoo"))
+    parser.add_argument(
+        "--fundamentals-dir",
+        default=str(ROOT / "data" / "raw" / "yahoo_fundamentals"),
+    )
+    parser.add_argument("--fetch", action="store_true", help="free source only: download Yahoo JSON")
+    args = parser.parse_args()
 
+    if args.source == "fixture":
+        snapshot = load_fixture_snapshot()
+    else:
+        snapshot = load_free_snapshot(
+            raw_dir=Path(args.raw_dir),
+            fundamentals_dir=Path(args.fundamentals_dir),
+            fetch=args.fetch,
+        )
+
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     rankings = [ranking_row(row) for row in computed]
     rankings.sort(
         key=lambda row: (
@@ -45,6 +58,7 @@ def main() -> int:
         )
     )
     write_json(RANKINGS_PATH, rankings)
+    write_json(META_PATH, snapshot.meta())
 
     STOCKS_DIR.mkdir(parents=True, exist_ok=True)
     for path in STOCKS_DIR.glob("*.json"):
@@ -52,7 +66,9 @@ def main() -> int:
     for row in computed:
         write_json(STOCKS_DIR / f"{row['ticker']}.json", detail_row(row))
 
+    print(f"source={snapshot.source}")
     print(f"wrote {RANKINGS_PATH.relative_to(ROOT)}")
+    print(f"wrote {META_PATH.relative_to(ROOT)}")
     print(f"wrote {len(computed)} stock JSON files under {STOCKS_DIR.relative_to(ROOT)}")
     return 0
 

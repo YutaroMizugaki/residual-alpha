@@ -1,0 +1,34 @@
+{
+  "priceSource": "yahoo_chart",
+  "marketSymbol": "^N225",
+  "marketName": "Nikkei 225",
+  "range": "1y",
+  "riskFreeRate": 0.015,
+  "equityRiskPremium": 0.05,
+  "retentionRatio": 0.5,
+  "notes": [
+    "Yahoo symbols use .T for TSE. Market is Nikkei 225.",
+    "Stooq live HTTP is not used; it is bot-walled from automated clients.",
+    "Fundamentals come from Yahoo annual timeseries, not EDINET/J-Quants."
+  ],
+  "stocks": [
+    {
+      "ticker": "7203",
+      "yahooSymbol": "7203.T",
+      "stooqSymbol": "7203.jp",
+      "companyName": "Toyota Motor"
+    },
+    {
+      "ticker": "6758",
+      "yahooSymbol": "6758.T",
+      "stooqSymbol": "6758.jp",
+      "companyName": "Sony Group"
+    },
+    {
+      "ticker": "9984",
+      "yahooSymbol": "9984.T",
+      "stooqSymbol": "9984.jp",
+      "companyName": "SoftBank Group"
+    }
+  ]
+}

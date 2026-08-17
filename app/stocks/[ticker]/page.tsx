@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { MetricCard } from "@/components/metric-card";
 import { ScoreBreakdown } from "@/components/score-breakdown";
-import { loadRankings, loadStock } from "@/lib/data";
+import { SourceKicker } from "@/components/source-kicker";
+import { loadMeta, loadRankings, loadStock } from "@/lib/data";
 import {
   formatBeta,
   formatNumber,
@@ -28,13 +29,13 @@ export async function generateMetadata({ params }: PageProps) {
     return { title: "Not found — Residual Alpha" };
   }
   return {
-    title: `${stock.ticker} ${stock.companyName} — Fixture`,
+    title: `${stock.ticker} ${stock.companyName} — Residual Alpha`,
   };
 }
 
 export default async function StockPage({ params }: PageProps) {
   const { ticker } = await params;
-  const stock = await loadStock(ticker);
+  const [stock, meta] = await Promise.all([loadStock(ticker), loadMeta()]);
   if (!stock) {
     notFound();
   }
@@ -45,12 +46,11 @@ export default async function StockPage({ params }: PageProps) {
       : stock.intrinsicUpside >= 0
         ? "text-emerald-700"
         : "text-red-700";
+  const isFixture = meta.source === "fixture";
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-      <p className="text-sm font-semibold tracking-wide text-amber-800 uppercase">
-        Fixture Data
-      </p>
+      <SourceKicker meta={meta} />
       <p className="mt-2 text-sm">
         <Link href="/ranking" className="underline">
           ← Ranking
@@ -60,8 +60,9 @@ export default async function StockPage({ params }: PageProps) {
         <span className="font-mono">{stock.ticker}</span> {stock.companyName}
       </h1>
       <p className="mt-1 text-sm text-slate-600">
-        Fictional test issuer. Book value is million JPY; shares are million
-        shares; displayed price is JPY per share.
+        {isFixture
+          ? "Fictional test issuer. Book value is million JPY; shares are million shares; displayed price is JPY per share."
+          : `Real listed ticker in the free-provider universe. Price source ${meta.priceSource}${stock.priceAsOf ? ` as of ${stock.priceAsOf}` : ""}. Fundamentals source ${meta.fundamentalsSource}. Book value is million JPY; shares are million shares. Not investment advice.`}
       </p>
 
       {!stock.eligible ? (
@@ -74,7 +75,11 @@ export default async function StockPage({ params }: PageProps) {
       ) : null}
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Price" value={formatPrice(stock.price)} />
+        <MetricCard
+          label="Price"
+          value={formatPrice(stock.price)}
+          hint={stock.priceAsOf ? `as of ${stock.priceAsOf}` : undefined}
+        />
         <MetricCard
           label="Intrinsic Price"
           value={formatPrice(stock.intrinsicPrice)}
@@ -107,7 +112,11 @@ export default async function StockPage({ params }: PageProps) {
         <MetricCard
           label="Book Value"
           value={formatNumber(stock.bookValue, 0)}
-          hint="million JPY"
+          hint={
+            stock.fundamentalsAsOf
+              ? `million JPY · FY ${stock.fundamentalsAsOf}`
+              : "million JPY"
+          }
         />
         <MetricCard
           label="Shares"

@@ -1,0 +1,9 @@
+{
+  "disclaimer": "Optional manual overlay. Empty by default. Not live EDINET data. Missing stays missing.",
+  "units": {
+    "bookValue": "million JPY",
+    "sharesOutstanding": "million shares",
+    "latestRoe": "decimal"
+  },
+  "stocks": {}
+}

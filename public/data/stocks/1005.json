@@ -2,6 +2,8 @@
   "ticker": "1005",
   "companyName": "Weak ROE",
   "price": 900.0,
+  "priceAsOf": null,
+  "fundamentalsAsOf": null,
   "betaRaw": 1.1,
   "betaAdjusted": 1.067,
   "betaStatus": "valid",

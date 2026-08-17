@@ -122,3 +122,9 @@ def test_public_json_matches_engine_and_schema():
         public_detail = json.loads((STOCKS_DIR / f"{row['ticker']}.json").read_text(encoding="utf-8"))
         assert public_detail == detail_row(row)
         assert "forecast" in public_detail
+        assert "priceAsOf" in public_detail
+        assert "fundamentalsAsOf" in public_detail
+
+    meta = json.loads((ROOT / "public" / "data" / "meta.json").read_text(encoding="utf-8"))
+    assert meta["source"] == "fixture"
+    assert meta["sourceLabel"] == "Fixture Data"

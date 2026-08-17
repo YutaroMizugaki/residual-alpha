@@ -1,6 +1,6 @@
 # Architecture
 
-Residual Alpha Fixture MVP is a static ranking of fictional issuers.
+Residual Alpha builds a static ranking from a provider snapshot.
 
 ## Source of truth
 
@@ -11,13 +11,17 @@ Next.js = presentation
 ```
 
 ```text
-Fixture JSON
+Provider snapshot
   → Python quant engine
   → public/data/*.json
   → Next.js UI
 ```
 
-TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or scores. It loads JSON and formats it.
+TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or scores.
+
+Default provider is **fixture** (fictional issuers). Optional **free** provider
+loads TSE prices from the Yahoo Finance chart API and annual fundamentals from
+the Yahoo timeseries API (equity, net income, shares). See `docs/providers.md`.
 
 ## What this phase does not include
 
@@ -25,8 +29,9 @@ TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or s
 No DB
 No backend API
 No cloud worker
-No live market data
-No EDINET / J-Quants / Yahoo / Stooq
+No EDINET / J-Quants (API keys required)
+No live Stooq HTTP (bot-wall)
+No GitHub Actions cron
 No authentication
 No backtest
 No trading
@@ -35,9 +40,11 @@ No trading
 ## Layout
 
 - `scripts/models/` — valuation math
+- `scripts/providers/` — fixture + free Yahoo price/fundamentals snapshots
 - `scripts/fixtures/stocks.json` — fictional inputs
 - `scripts/build_public_data.py` — writes `public/data/`
-- `tests/` — pytest
+- `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
+- `tests/` — pytest (no live network)
 - `app/`, `components/`, `lib/` — Next.js display only
 
 ## Units
