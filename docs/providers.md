@@ -18,7 +18,7 @@ Provider snapshot
 | `free` | Yahoo Finance chart JSON | Yahoo annual timeseries | no | no |
 | `jquants` | Yahoo Finance chart JSON | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch | no |
 | `edinet` | Yahoo Finance chart JSON | EDINET yuho XBRL instance | `EDINET_API_KEY` to download zips | no |
-| `auto` | Yahoo Finance chart JSON | first usable source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
+| `auto` | Yahoo Finance chart JSON | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
 
 Yahoo timeseries fields (free source):
 
@@ -81,12 +81,17 @@ python scripts/refresh_public_data.py --dry-run
 python scripts/refresh_public_data.py --source auto
 ```
 
-`--source auto` is cache-only. Per name it takes the first usable fundamentals
-source and does not mix EDINET, J-Quants, and Yahoo inside one issuer. Names
-without a cached chart or financials stay ranking-ineligible; missing is not 0.
+`--source auto` is cache-only. Per name it takes the first **complete**
+fundamentals source (book, shares, and 3 beginning-book ROE years) and does
+not mix EDINET, J-Quants, and Yahoo inside one issuer. A partial higher-tier
+cache does not block a complete lower-tier cache. If nothing is complete, the
+first partial is kept. Names without a cached chart or financials stay
+ranking-ineligible; missing is not 0.
 
-`refresh_public_data.py` always runs the Yahoo fetch when not `--skip-fetch`.
-It runs J-Quants / EDINET XBRL fetches only when the matching env var is set.
+`refresh_public_data.py --source free` fetches only Yahoo even if keyed env
+vars are set. `--source jquants` / `--source edinet` fetch Yahoo plus that
+keyed cache when the matching key is present.
+
 Fetch failures print a warning and continue; a failed build still fails the
 script. It does not crawl EDINET filing dates. Run
 `fetch_edinet_list.py --date YYYY-MM-DD` first if you need new yuho zips.

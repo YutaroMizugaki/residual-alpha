@@ -21,8 +21,8 @@ TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or s
 
 Default provider is **fixture** (fictional issuers). Optional **free**,
 **jquants**, **edinet**, and **auto** providers keep Yahoo prices. **auto**
-picks fundamentals per name (EDINET XBRL, then J-Quants FY, then Yahoo
-timeseries). See `docs/providers.md`.
+picks the first complete fundamentals source per name (EDINET XBRL, then
+J-Quants FY, then Yahoo timeseries). See `docs/providers.md`.
 
 ## What this phase does not include
 

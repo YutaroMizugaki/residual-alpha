@@ -87,6 +87,23 @@ def _poison_jquants(path: Path, code: str) -> None:
     )
 
 
+def _write_partial_edinet(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
+<xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance" xmlns:jpigp="http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor">
+  <xbrli:unit id="JPY"><xbrli:measure>iso4217:JPY</xbrli:measure></xbrli:unit>
+  <xbrli:context id="CurrentYearInstant">
+    <xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2026-03-31</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="CurrentYearInstant" unitRef="JPY" decimals="-6">1000000</jpigp:EquityAttributableToOwnersOfParentIFRS>
+</xbrli:xbrl>
+""",
+        encoding="utf-8",
+    )
+
+
 def _poison_yahoo(path: Path) -> None:
     _write_json(
         path,
@@ -131,6 +148,7 @@ def _toyota_universe(path: Path) -> Path:
 
 
 def test_fetch_plan_yahoo_always_keyed_optional():
+    keys = {"JQUANTS_API_KEY": "jq", "EDINET_API_KEY": "ed"}
     assert fetch_plan({}) == ["fetch_free_data.py"]
     assert fetch_plan({"JQUANTS_API_KEY": "  "}) == ["fetch_free_data.py"]
     assert fetch_plan({"JQUANTS_API_KEY": "jq"}) == [
@@ -141,11 +159,21 @@ def test_fetch_plan_yahoo_always_keyed_optional():
         "fetch_free_data.py",
         "fetch_edinet_xbrl.py",
     ]
-    assert fetch_plan({"JQUANTS_API_KEY": "jq", "EDINET_API_KEY": "ed"}) == [
+    assert fetch_plan(keys) == [
         "fetch_free_data.py",
         "fetch_jquants_data.py",
         "fetch_edinet_xbrl.py",
     ]
+    assert fetch_plan(keys, source="free") == ["fetch_free_data.py"]
+    assert fetch_plan(keys, source="jquants") == [
+        "fetch_free_data.py",
+        "fetch_jquants_data.py",
+    ]
+    assert fetch_plan(keys, source="edinet") == [
+        "fetch_free_data.py",
+        "fetch_edinet_xbrl.py",
+    ]
+    assert fetch_plan({"JQUANTS_API_KEY": "jq"}, source="edinet") == ["fetch_free_data.py"]
 
 
 def test_auto_prefers_edinet_when_jquants_also_present(tmp_path: Path):
@@ -304,3 +332,78 @@ def test_expanded_universe_extra_names_stay_ineligible(tmp_path: Path):
         assert by_ticker[ticker]["price"] is None
         assert "missing_book_value" in by_ticker[ticker]["exclusionReasons"]
         assert "missing_price" in by_ticker[ticker]["exclusionReasons"]
+
+
+def test_auto_skips_partial_edinet_for_complete_jquants(tmp_path: Path):
+    edinet_dir = tmp_path / "edinet"
+    yahoo_fund = tmp_path / "yahoo_fund"
+    _write_partial_edinet(edinet_dir / "72030" / "instance.xbrl")
+    _poison_yahoo(yahoo_fund / "7203.T.json")
+    snapshot = load_auto_snapshot(
+        universe_path=_toyota_universe(tmp_path / "universe.json"),
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=yahoo_fund,
+        jquants_dir=JQUANTS_DIR,
+        edinet_dir=edinet_dir,
+        fundamentals_path=tmp_path / "empty.json",
+    )
+    toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
+    assert snapshot.fundamentals_source == "jquants_summary"
+    assert toyota["bookValue"] == pytest.approx(TOYOTA_BOOK)
+    assert toyota["bookValue"] != pytest.approx(POISON_BOOK)
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
+    ranked = next(row for row in computed if row["ticker"] == "7203")
+    assert ranked["eligible"] is True
+
+
+def test_auto_keeps_partial_when_no_complete_source(tmp_path: Path):
+    edinet_dir = tmp_path / "edinet"
+    _write_partial_edinet(edinet_dir / "72030" / "instance.xbrl")
+    snapshot = load_auto_snapshot(
+        universe_path=_toyota_universe(tmp_path / "universe.json"),
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=tmp_path / "no-yahoo",
+        jquants_dir=tmp_path / "no-jquants",
+        edinet_dir=edinet_dir,
+        fundamentals_path=tmp_path / "empty.json",
+    )
+    toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
+    assert snapshot.fundamentals_source == "edinet_xbrl"
+    assert toyota["bookValue"] == pytest.approx(POISON_BOOK)
+    assert toyota["latestRoe"] is None
+    assert toyota["sharesOutstanding"] is None
+    computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
+    ranked = next(row for row in computed if row["ticker"] == "7203")
+    assert ranked["eligible"] is False
+    assert ranked["bookValue"] == pytest.approx(POISON_BOOK)
+    assert "missing_shares_outstanding" in ranked["exclusionReasons"]
+    assert "missing_roe" in ranked["exclusionReasons"]
+
+
+def test_extra_names_do_not_change_core_scores(tmp_path: Path):
+    overlay = tmp_path / "empty.json"
+    three = load_auto_snapshot(
+        universe_path=_mini_universe(
+            tmp_path / "universe.json",
+            [("7203", "Toyota Motor"), ("6758", "Sony Group"), ("9984", "SoftBank Group")],
+        ),
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=FUND_DIR,
+        jquants_dir=JQUANTS_DIR,
+        edinet_dir=XBRL_DIR,
+        fundamentals_path=overlay,
+    )
+    ten = load_auto_snapshot(
+        raw_dir=YAHOO_DIR,
+        fundamentals_dir=FUND_DIR,
+        jquants_dir=JQUANTS_DIR,
+        edinet_dir=XBRL_DIR,
+        fundamentals_path=overlay,
+    )
+    three_eval = {
+        row["ticker"]: row for row in evaluate_universe(three.stocks, three.assumptions)
+    }
+    ten_eval = {row["ticker"]: row for row in evaluate_universe(ten.stocks, ten.assumptions)}
+    for ticker in CORE:
+        assert three_eval[ticker]["totalScore"] == pytest.approx(ten_eval[ticker]["totalScore"])
+        assert three_eval[ticker]["rank"] == ten_eval[ticker]["rank"]

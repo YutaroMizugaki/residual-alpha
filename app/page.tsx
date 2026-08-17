@@ -31,7 +31,7 @@ export default async function HomePage() {
           zips; live download needs <code>EDINET_API_KEY</code>
         </li>
         <li>
-          Auto source picks the first usable fundamentals cache per name
+          Auto source picks the first complete fundamentals cache per name
           (EDINET, then J-Quants, then Yahoo). Operator refresh is
           <code>scripts/refresh_public_data.py</code>; there is no scheduled
           GitHub Actions cron

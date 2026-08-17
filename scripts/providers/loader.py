@@ -154,7 +154,23 @@ def _apply_parsed_fundamentals(stock: dict[str, Any], fundamentals) -> bool:
     stock["latestRoe"] = fundamentals.latest_roe
     stock["roeHistory"] = fundamentals.roe_history
     stock["fundamentalsAsOf"] = fundamentals.fiscal_year_end
+    return _fundamentals_present(fundamentals)
+
+
+def _fundamentals_present(fundamentals) -> bool:
     return fundamentals.book_value is not None or fundamentals.latest_roe is not None
+
+
+def _fundamentals_complete(fundamentals) -> bool:
+    """Enough for residual-income ranking: book, shares, and 3 beginning-book ROEs."""
+    history = fundamentals.roe_history
+    return (
+        fundamentals.book_value is not None
+        and fundamentals.shares_outstanding is not None
+        and fundamentals.latest_roe is not None
+        and isinstance(history, list)
+        and len(history) >= 3
+    )
 
 
 def _fundamentals_source_label(used: set[str], overlay: bool) -> str:
@@ -487,11 +503,14 @@ def load_auto_snapshot(
     fetcher=None,
 ) -> DataSnapshot:
     """
-    Prices from Yahoo chart JSON. Fundamentals per name, first usable source:
+    Prices from Yahoo chart JSON. Fundamentals per name, first complete source:
 
     EDINET yuho XBRL → J-Quants FY summary → Yahoo annual timeseries → overlay.
 
-    Sources are not mixed inside one name. Missing stays missing. Cache only.
+    Complete means book, shares, and 3 beginning-book ROE years. A partial
+    higher-tier cache does not block a complete lower-tier cache. Sources are
+    not mixed inside one name. If nothing is complete, the first partial is
+    kept. Missing stays missing. Cache only.
     """
     universe = load_universe(universe_path)
     overlay_map = load_fundamentals(fundamentals_path)
@@ -524,37 +543,53 @@ def load_auto_snapshot(
             market_series=market_series,
             as_of_dates=as_of_dates,
         )
-        chosen: str | None = None
+        chosen_label: str | None = None
+        chosen_fundamentals = None
+        fallback_label: str | None = None
+        fallback_fundamentals = None
         edinet_code = edinet_sec_code(item)
         jq_code = jquants_code(item)
+
+        def take(label: str, fundamentals) -> None:
+            nonlocal chosen_label, chosen_fundamentals, fallback_label, fallback_fundamentals
+            if chosen_fundamentals is not None:
+                return
+            if _fundamentals_complete(fundamentals):
+                chosen_label = label
+                chosen_fundamentals = fundamentals
+            elif fallback_fundamentals is None and _fundamentals_present(fundamentals):
+                fallback_label = label
+                fallback_fundamentals = fundamentals
+
         try:
-            if _apply_parsed_fundamentals(stock, parse_edinet_xbrl_dir(edinet_dir / edinet_code)):
-                chosen = "edinet_xbrl"
+            take("edinet_xbrl", parse_edinet_xbrl_dir(edinet_dir / edinet_code))
         except ProviderError:
             pass
-        if chosen is None:
+        if chosen_fundamentals is None:
             try:
-                if _apply_parsed_fundamentals(
-                    stock,
+                take(
+                    "jquants_summary",
                     parse_jquants_summary(
                         _payload_from_raw(jquants_dir, jq_code),
                         expected_code=jq_code,
                     ),
-                ):
-                    chosen = "jquants_summary"
+                )
             except ProviderError:
                 pass
-        if chosen is None:
+        if chosen_fundamentals is None:
             try:
-                if _apply_parsed_fundamentals(
-                    stock,
+                take(
+                    "yahoo_timeseries",
                     parse_yahoo_fundamentals(_payload_from_raw(fundamentals_dir, yahoo_symbol)),
-                ):
-                    chosen = "yahoo_timeseries"
+                )
             except ProviderError:
                 pass
-        if chosen is not None:
-            used_sources.add(chosen)
+        if chosen_fundamentals is None:
+            chosen_label = fallback_label
+            chosen_fundamentals = fallback_fundamentals
+        if chosen_fundamentals is not None:
+            _apply_parsed_fundamentals(stock, chosen_fundamentals)
+            used_sources.add(chosen_label)
         stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
         if filled:
             used_overlay = True

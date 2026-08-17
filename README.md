@@ -78,9 +78,10 @@ python scripts/build_public_data.py --source edinet
 
 ## Auto source + operator refresh (optional, not CI)
 
-`--source auto` uses cached files only. Fundamentals per name: EDINET XBRL,
-then J-Quants FY summary, then Yahoo timeseries. Sources are not mixed inside
-one name. Extra universe names without cache stay ineligible.
+`--source auto` uses cached files only. Fundamentals per name: first complete
+source among EDINET XBRL, J-Quants FY summary, then Yahoo timeseries. Sources
+are not mixed inside one name. Extra universe names without cache stay
+ineligible.
 
 ```bash
 python scripts/refresh_public_data.py --dry-run

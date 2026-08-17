@@ -15,13 +15,13 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 
-def fetch_plan(env: dict[str, str] | None = None) -> list[str]:
-    """Yahoo always. Keyed scripts only when the matching env var is set."""
-    source = env if env is not None else os.environ
+def fetch_plan(env: dict[str, str] | None = None, *, source: str = "auto") -> list[str]:
+    """Yahoo prices always. Keyed scripts only for sources that use them, and only with keys."""
+    environ = env if env is not None else os.environ
     plan = ["fetch_free_data.py"]
-    if (source.get("JQUANTS_API_KEY") or "").strip():
+    if source in {"auto", "jquants"} and (environ.get("JQUANTS_API_KEY") or "").strip():
         plan.append("fetch_jquants_data.py")
-    if (source.get("EDINET_API_KEY") or "").strip():
+    if source in {"auto", "edinet"} and (environ.get("EDINET_API_KEY") or "").strip():
         plan.append("fetch_edinet_xbrl.py")
     return plan
 
@@ -42,7 +42,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    plan = [] if args.skip_fetch else fetch_plan()
+    plan = [] if args.skip_fetch else fetch_plan(source=args.source)
     if args.dry_run:
         for script in plan:
             print(f"would run {script}")
