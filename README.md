@@ -82,6 +82,8 @@ python scripts/build_public_data.py --source edinet
 then Yahoo chart. Fundamentals per name: first complete source among EDINET
 XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
 inside one name. Recorded Yahoo caches cover all 10 universe names.
+Stock detail JSON includes per-name `priceSource` and `fundamentalsSource`.
+Universe `meta.json` is the union across names.
 
 ```bash
 python scripts/refresh_public_data.py --dry-run

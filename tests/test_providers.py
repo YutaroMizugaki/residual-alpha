@@ -105,6 +105,8 @@ def test_free_provider_prices_without_fundamentals_are_not_zero(tmp_path: Path):
     assert toyota["bookValue"] is None
     assert toyota["latestRoe"] is None
     assert snapshot.fundamentals_source == "missing"
+    assert toyota["priceSource"] == "yahoo_chart"
+    assert toyota["fundamentalsSource"] is None
     assert toyota["stockReturns"]
     assert toyota["marketReturns"]
     assert len(toyota["stockReturns"]) == len(toyota["marketReturns"])
@@ -144,6 +146,8 @@ def test_free_provider_with_fundamentals_can_value(tmp_path: Path):
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     toyota = next(row for row in computed if row["ticker"] == "7203")
     assert snapshot.fundamentals_source == "manual_overlay"
+    assert toyota["fundamentalsSource"] == "manual_overlay"
+    assert toyota["priceSource"] == "yahoo_chart"
     assert toyota["eligible"] is True
     assert toyota["intrinsicPrice"] is not None
     assert toyota["forecast"][9]["roe"] == toyota["costOfEquity"]
@@ -156,6 +160,8 @@ def test_fixture_provider_still_default():
     snapshot = load_fixture_snapshot()
     assert snapshot.source == "fixture"
     assert snapshot.stocks[0]["ticker"] == "1001"
+    assert snapshot.stocks[0]["priceSource"] == "fixture"
+    assert snapshot.stocks[0]["fundamentalsSource"] == "fixture"
 
 
 def test_non_jpy_rejected():
@@ -257,8 +263,12 @@ def test_free_snapshot_with_recorded_fundamentals_ranks(tmp_path: Path):
         "6098",
     }
     assert toyota["fundamentalsAsOf"] == "2026-03-31"
+    assert toyota["priceSource"] == "yahoo_chart"
+    assert toyota["fundamentalsSource"] == "yahoo_timeseries"
     assert by_ticker["6861"]["eligible"] is True
     assert by_ticker["6861"]["price"] == pytest.approx(86750.0)
+    assert by_ticker["6861"]["priceSource"] == "yahoo_chart"
+    assert by_ticker["6861"]["fundamentalsSource"] == "yahoo_timeseries"
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)
     assert by_ticker["6861"]["bookValue"] != 0
 
@@ -289,6 +299,7 @@ def test_overlay_does_not_overwrite_yahoo_fundamentals(tmp_path: Path):
     toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
     assert toyota["bookValue"] == pytest.approx(39_918_854.0)
     assert toyota["latestRoe"] != pytest.approx(0.99)
+    assert toyota["fundamentalsSource"] == "yahoo_timeseries"
     assert snapshot.fundamentals_source == "yahoo_timeseries"
 
 

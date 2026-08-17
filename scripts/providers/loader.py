@@ -62,6 +62,12 @@ def load_json(path: Path) -> Any:
 
 def load_fixture_snapshot(path: Path = FIXTURE_PATH) -> DataSnapshot:
     payload = load_json(path)
+    stocks = []
+    for item in payload["stocks"]:
+        stock = dict(item)
+        stock.setdefault("priceSource", "fixture")
+        stock.setdefault("fundamentalsSource", "fixture")
+        stocks.append(stock)
     return DataSnapshot(
         source="fixture",
         source_label="Fixture Data",
@@ -72,7 +78,7 @@ def load_fixture_snapshot(path: Path = FIXTURE_PATH) -> DataSnapshot:
         disclaimer_ja="現在表示している銘柄および数値はテスト用fixtureです。",
         disclaimer_en="Test data only. Tickers and figures are fictional, not live market prices.",
         assumptions=payload["assumptions"],
-        stocks=payload["stocks"],
+        stocks=stocks,
     )
 
 
@@ -118,11 +124,13 @@ def _blank_stock(ticker: str, company_name: str) -> dict[str, Any]:
         "companyName": company_name,
         "price": None,
         "priceAsOf": None,
+        "priceSource": None,
         "bookValue": None,
         "sharesOutstanding": None,
         "latestRoe": None,
         "roeHistory": None,
         "fundamentalsAsOf": None,
+        "fundamentalsSource": None,
         "stockReturns": None,
         "marketReturns": None,
     }
@@ -133,6 +141,7 @@ def _apply_price_series(
     series,
     market_series,
     as_of_dates: list[str],
+    source_label: str | None = None,
 ) -> None:
     last = series.last()
     stock_returns, market_returns = aligned_simple_returns(series, market_series)
@@ -140,6 +149,8 @@ def _apply_price_series(
         stock["price"] = last[1]
         stock["priceAsOf"] = last[0].isoformat()
         as_of_dates.append(stock["priceAsOf"])
+        if source_label is not None:
+            stock["priceSource"] = source_label
     if stock_returns and market_returns:
         stock["stockReturns"] = stock_returns
         stock["marketReturns"] = market_returns
@@ -162,7 +173,13 @@ def _apply_yahoo_prices(
 ) -> None:
     try:
         series = parse_yahoo_chart(load_chart(yahoo_symbol), expected_symbol=yahoo_symbol)
-        _apply_price_series(stock, series, market_series, as_of_dates)
+        _apply_price_series(
+            stock,
+            series,
+            market_series,
+            as_of_dates,
+            source_label="yahoo_chart",
+        )
     except ProviderError:
         pass
 
@@ -211,7 +228,13 @@ def _apply_price_waterfall(
         chosen_label = fallback_label
         chosen_series = fallback_series
     if chosen_series is not None:
-        _apply_price_series(stock, chosen_series, market_series, as_of_dates)
+        _apply_price_series(
+            stock,
+            chosen_series,
+            market_series,
+            as_of_dates,
+            source_label=chosen_label,
+        )
         used_price_sources.add(chosen_label)
 
 
@@ -223,13 +246,21 @@ def _price_source_label(used: set[str]) -> str:
     return "+".join(labels) if labels else "missing"
 
 
-def _apply_parsed_fundamentals(stock: dict[str, Any], fundamentals) -> bool:
+def _apply_parsed_fundamentals(
+    stock: dict[str, Any],
+    fundamentals,
+    *,
+    source_label: str | None = None,
+) -> bool:
     stock["bookValue"] = fundamentals.book_value
     stock["sharesOutstanding"] = fundamentals.shares_outstanding
     stock["latestRoe"] = fundamentals.latest_roe
     stock["roeHistory"] = fundamentals.roe_history
     stock["fundamentalsAsOf"] = fundamentals.fiscal_year_end
-    return _fundamentals_present(fundamentals)
+    present = _fundamentals_present(fundamentals)
+    if present and source_label is not None:
+        stock["fundamentalsSource"] = source_label
+    return present
 
 
 def _fundamentals_present(fundamentals) -> bool:
@@ -267,6 +298,16 @@ def _merge_overlay(base: dict[str, Any], overlay: dict[str, Any]) -> tuple[dict[
             merged[key] = overlay[key]
             filled = True
     return merged, filled
+
+
+def _stamp_overlay_source(stock: dict[str, Any], filled: bool) -> None:
+    if not filled:
+        return
+    current = stock.get("fundamentalsSource")
+    if isinstance(current, str) and current:
+        stock["fundamentalsSource"] = f"{current}+manual_overlay"
+    else:
+        stock["fundamentalsSource"] = "manual_overlay"
 
 
 def load_free_snapshot(
@@ -323,12 +364,14 @@ def load_free_snapshot(
             used = _apply_parsed_fundamentals(
                 stock,
                 parse_yahoo_fundamentals(load_fundamentals_payload(yahoo_symbol)),
+                source_label="yahoo_timeseries",
             )
             if used:
                 used_yahoo_fundamentals = True
         except ProviderError:
             pass
         stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
+        _stamp_overlay_source(stock, filled)
         if filled:
             used_overlay = True
         stocks.append(stock)
@@ -445,12 +488,14 @@ def load_jquants_snapshot(
             used = _apply_parsed_fundamentals(
                 stock,
                 parse_jquants_summary(load_summary(code), expected_code=code),
+                source_label="jquants_summary",
             )
             if used:
                 used_jquants = True
         except ProviderError:
             pass
         stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
+        _stamp_overlay_source(stock, filled)
         if filled:
             used_overlay = True
         stocks.append(stock)
@@ -542,12 +587,17 @@ def load_edinet_snapshot(
             as_of_dates=as_of_dates,
         )
         try:
-            used = _apply_parsed_fundamentals(stock, parse_edinet_xbrl_dir(edinet_dir / code))
+            used = _apply_parsed_fundamentals(
+                stock,
+                parse_edinet_xbrl_dir(edinet_dir / code),
+                source_label="edinet_xbrl",
+            )
             if used:
                 used_edinet = True
         except ProviderError:
             pass
         stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
+        _stamp_overlay_source(stock, filled)
         if filled:
             used_overlay = True
         stocks.append(stock)
@@ -696,9 +746,14 @@ def load_auto_snapshot(
             chosen_label = fallback_label
             chosen_fundamentals = fallback_fundamentals
         if chosen_fundamentals is not None:
-            _apply_parsed_fundamentals(stock, chosen_fundamentals)
+            _apply_parsed_fundamentals(
+                stock,
+                chosen_fundamentals,
+                source_label=chosen_label,
+            )
             used_sources.add(chosen_label)
         stock, filled = _merge_overlay(stock, overlay_map.get(ticker, {}))
+        _stamp_overlay_source(stock, filled)
         if filled:
             used_overlay = True
         stocks.append(stock)

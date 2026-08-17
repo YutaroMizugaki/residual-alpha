@@ -227,10 +227,14 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["9984"]["eligible"] is True
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
     assert set(ranked) == {"7203", "6758", "9984"}
+    assert toyota["fundamentalsSource"] == "edinet_xbrl"
+    assert toyota["priceSource"] == "yahoo_chart"
     assert by_ticker["6861"]["eligible"] is False
     assert by_ticker["6861"]["price"] is not None
     assert by_ticker["6861"]["price"] != 0
     assert by_ticker["6861"]["bookValue"] is None
+    assert by_ticker["6861"]["priceSource"] == "yahoo_chart"
+    assert by_ticker["6861"]["fundamentalsSource"] is None
 
 
 def test_edinet_without_xbrl_stays_ineligible(tmp_path: Path):
@@ -246,6 +250,7 @@ def test_edinet_without_xbrl_stays_ineligible(tmp_path: Path):
     assert "missing_book_value" in toyota["exclusionReasons"]
     assert toyota["bookValue"] is None
     assert snapshot.fundamentals_source == "missing"
+    assert toyota["fundamentalsSource"] is None
 
 
 def test_parse_edinet_xbrl_dir_merges_files(tmp_path: Path):

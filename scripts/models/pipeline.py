@@ -29,6 +29,15 @@ from models.roe import fade_roe, normalize_roe
 from models.scoring import apply_scores
 
 
+def optional_source_label(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        return text or None
+    return None
+
+
 def optional_number(value: Any, field: str) -> tuple[float | None, str | None]:
     """Return (number, exclusion_reason). Explicit 0 is kept; None/NaN is missing."""
     if value is None:
@@ -88,6 +97,8 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
         market_returns = _optional_float_list(assumptions.get("marketReturns"))
     price_as_of = stock.get("priceAsOf")
     fundamentals_as_of = stock.get("fundamentalsAsOf")
+    price_source = optional_source_label(stock.get("priceSource"))
+    fundamentals_source = optional_source_label(stock.get("fundamentalsSource"))
 
     beta_raw = None
     beta_adjusted = None
@@ -196,7 +207,9 @@ def evaluate_stock(stock: dict, assumptions: dict) -> dict:
         "exclusionReasons": unique_reasons,
         "price": price,
         "priceAsOf": price_as_of if isinstance(price_as_of, str) else None,
+        "priceSource": price_source,
         "fundamentalsAsOf": fundamentals_as_of if isinstance(fundamentals_as_of, str) else None,
+        "fundamentalsSource": fundamentals_source,
         "bookValue": book_value,
         "sharesOutstanding": shares,
         "betaRaw": beta_raw,
@@ -286,7 +299,9 @@ def detail_row(stock: dict) -> dict:
         "companyName": stock["companyName"],
         "price": _round(stock["price"], 4),
         "priceAsOf": stock.get("priceAsOf"),
+        "priceSource": stock.get("priceSource"),
         "fundamentalsAsOf": stock.get("fundamentalsAsOf"),
+        "fundamentalsSource": stock.get("fundamentalsSource"),
         "betaRaw": _round(stock["betaRaw"], 8),
         "betaAdjusted": _round(stock["betaAdjusted"], 8),
         "betaStatus": stock["betaStatus"],

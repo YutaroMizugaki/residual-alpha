@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 YAHOO_DIR = ROOT / "tests" / "data" / "yahoo"
 FUND_DIR = ROOT / "tests" / "data" / "yahoo_fundamentals"
 JQUANTS_DIR = ROOT / "tests" / "data" / "jquants"
+BARS_DIR = ROOT / "tests" / "data" / "jquants_bars"
 XBRL_DIR = ROOT / "tests" / "data" / "edinet_xbrl"
 UNIVERSE_PATH = ROOT / "scripts" / "providers" / "universe.json"
 
@@ -261,8 +262,11 @@ def test_auto_mixed_sources_across_names(tmp_path: Path):
     by_ticker = {row["ticker"]: row for row in snapshot.stocks}
     assert snapshot.fundamentals_source == "edinet_xbrl+jquants_summary+yahoo_timeseries"
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
+    assert by_ticker["7203"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
+    assert by_ticker["6758"]["fundamentalsSource"] == "jquants_summary"
     assert by_ticker["9984"]["bookValue"] is not None
+    assert by_ticker["9984"]["fundamentalsSource"] == "yahoo_timeseries"
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
     assert set(ranked) == CORE
@@ -298,6 +302,7 @@ def test_auto_does_not_mix_sources_inside_one_name(tmp_path: Path):
     toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
     assert toyota["bookValue"] == pytest.approx(TOYOTA_BOOK)
     assert toyota["latestRoe"] != pytest.approx(0.99)
+    assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert snapshot.fundamentals_source == "edinet_xbrl"
 
 
@@ -309,10 +314,12 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         raw_dir=YAHOO_DIR,
         fundamentals_dir=FUND_DIR,
         jquants_dir=JQUANTS_DIR,
+        jquants_bars_dir=BARS_DIR,
         edinet_dir=XBRL_DIR,
         fundamentals_path=tmp_path / "empty.json",
     )
     assert snapshot.source == "auto"
+    assert snapshot.price_source == "jquants_bars+yahoo_chart"
     assert [row["ticker"] for row in snapshot.stocks] == tickers
     extras = [row for row in snapshot.stocks if row["ticker"] not in CORE]
     assert len(extras) == 7
@@ -322,6 +329,8 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         assert stock["bookValue"] is not None
         assert stock["bookValue"] != 0
         assert stock["latestRoe"] is not None
+        assert stock["priceSource"] == "yahoo_chart"
+        assert stock["fundamentalsSource"] == "yahoo_timeseries"
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     by_ticker = {row["ticker"]: row for row in computed}
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
@@ -330,6 +339,9 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
         assert by_ticker[ticker]["eligible"] is True
         assert by_ticker[ticker]["bookValue"] is not None
         assert by_ticker[ticker]["price"] is not None
+    for ticker in CORE:
+        assert by_ticker[ticker]["priceSource"] == "jquants_bars"
+        assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)
@@ -356,6 +368,8 @@ def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
     for stock in extras:
         assert stock["price"] is None
         assert stock["bookValue"] is None
+        assert stock["priceSource"] is None
+        assert stock["fundamentalsSource"] is None
         assert stock["sharesOutstanding"] is None
         assert stock["latestRoe"] is None
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
@@ -444,6 +458,8 @@ def test_ineligible_extra_prices_do_not_change_core_scores(tmp_path: Path):
         assert stock["price"] is not None
         assert stock["price"] != 0
         assert stock["bookValue"] is None
+        assert stock["priceSource"] == "yahoo_chart"
+        assert stock["fundamentalsSource"] is None
     three_eval = {
         row["ticker"]: row for row in evaluate_universe(three.stocks, three.assumptions)
     }

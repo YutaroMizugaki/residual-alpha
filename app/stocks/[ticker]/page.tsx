@@ -60,9 +60,15 @@ export default async function StockPage({ params }: PageProps) {
         <span className="font-mono">{stock.ticker}</span> {stock.companyName}
       </h1>
       <p className="mt-1 text-sm text-slate-600">
+        Price source {stock.priceSource ?? "missing"}
+        {stock.priceAsOf ? ` as of ${stock.priceAsOf}` : ""}. Fundamentals
+        source {stock.fundamentalsSource ?? "missing"}
+        {stock.fundamentalsAsOf ? ` (FY ${stock.fundamentalsAsOf})` : ""}.
+        Book value is million JPY; shares are million shares; displayed price
+        is JPY per share.
         {isFixture
-          ? "Fictional test issuer. Book value is million JPY; shares are million shares; displayed price is JPY per share."
-          : `Real listed ticker in the free-provider universe. Price source ${meta.priceSource}${stock.priceAsOf ? ` as of ${stock.priceAsOf}` : ""}. Fundamentals source ${meta.fundamentalsSource}. Book value is million JPY; shares are million shares. Not investment advice.`}
+          ? " Fictional test issuer."
+          : " Real listed ticker. Not investment advice."}
       </p>
 
       {!stock.eligible ? (
@@ -78,7 +84,11 @@ export default async function StockPage({ params }: PageProps) {
         <MetricCard
           label="Price"
           value={formatPrice(stock.price)}
-          hint={stock.priceAsOf ? `as of ${stock.priceAsOf}` : undefined}
+          hint={
+            [stock.priceAsOf ? `as of ${stock.priceAsOf}` : null, stock.priceSource]
+              .filter(Boolean)
+              .join(" · ") || undefined
+          }
         />
         <MetricCard
           label="Intrinsic Price"
@@ -113,9 +123,13 @@ export default async function StockPage({ params }: PageProps) {
           label="Book Value"
           value={formatNumber(stock.bookValue, 0)}
           hint={
-            stock.fundamentalsAsOf
-              ? `million JPY · FY ${stock.fundamentalsAsOf}`
-              : "million JPY"
+            [
+              "million JPY",
+              stock.fundamentalsAsOf ? `FY ${stock.fundamentalsAsOf}` : null,
+              stock.fundamentalsSource,
+            ]
+              .filter(Boolean)
+              .join(" · ")
           }
         />
         <MetricCard

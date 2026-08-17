@@ -155,11 +155,13 @@ def test_jquants_snapshot_prefers_bars_over_yahoo(tmp_path: Path):
     )
     toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
     assert snapshot.price_source == "jquants_bars"
+    assert toyota["priceSource"] == "jquants_bars"
     assert toyota["price"] == pytest.approx(3013.0)
     assert toyota["price"] != pytest.approx(1.0)
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     ranked = next(row for row in computed if row["ticker"] == "7203")
     assert ranked["eligible"] is True
+    assert ranked["priceSource"] == "jquants_bars"
 
 
 def test_jquants_snapshot_falls_back_to_yahoo_without_bars(tmp_path: Path):
@@ -173,6 +175,7 @@ def test_jquants_snapshot_falls_back_to_yahoo_without_bars(tmp_path: Path):
     )
     toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
     assert snapshot.price_source == "yahoo_chart"
+    assert toyota["priceSource"] == "yahoo_chart"
     assert toyota["price"] == pytest.approx(3013.0)
 
 
@@ -197,6 +200,7 @@ def test_partial_jquants_bars_do_not_block_yahoo(tmp_path: Path):
     )
     toyota = next(row for row in snapshot.stocks if row["ticker"] == "7203")
     assert snapshot.price_source == "yahoo_chart"
+    assert toyota["priceSource"] == "yahoo_chart"
     assert toyota["price"] == pytest.approx(3013.0)
     assert toyota["price"] != pytest.approx(51.0)
 
@@ -263,4 +267,6 @@ def test_auto_mixed_price_sources_across_names(tmp_path: Path):
     by_ticker = {row["ticker"]: row for row in snapshot.stocks}
     assert snapshot.price_source == "jquants_bars+yahoo_chart"
     assert by_ticker["7203"]["price"] == pytest.approx(3013.0)
+    assert by_ticker["7203"]["priceSource"] == "jquants_bars"
     assert by_ticker["6758"]["price"] == pytest.approx(3780.0)
+    assert by_ticker["6758"]["priceSource"] == "yahoo_chart"

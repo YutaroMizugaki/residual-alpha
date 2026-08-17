@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from models.pipeline import detail_row, evaluate_universe, ranking_row
+from providers.loader import load_fixture_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = ROOT / "scripts" / "fixtures" / "stocks.json"
@@ -35,8 +36,8 @@ def _load_fixture() -> dict:
 
 
 def _universe() -> list[dict]:
-    fixtures = _load_fixture()
-    return evaluate_universe(fixtures["stocks"], fixtures["assumptions"])
+    snapshot = load_fixture_snapshot()
+    return evaluate_universe(snapshot.stocks, snapshot.assumptions)
 
 
 def test_fixture_has_six_fictional_issuers():
@@ -123,8 +124,30 @@ def test_public_json_matches_engine_and_schema():
         assert public_detail == detail_row(row)
         assert "forecast" in public_detail
         assert "priceAsOf" in public_detail
+        assert "priceSource" in public_detail
         assert "fundamentalsAsOf" in public_detail
+        assert "fundamentalsSource" in public_detail
+        assert public_detail["priceSource"] == "fixture"
+        assert public_detail["fundamentalsSource"] == "fixture"
 
     meta = json.loads((ROOT / "public" / "data" / "meta.json").read_text(encoding="utf-8"))
     assert meta["source"] == "fixture"
     assert meta["sourceLabel"] == "Fixture Data"
+
+
+def test_evaluate_stock_passes_per_name_sources():
+    fixtures = _load_fixture()
+    stock = dict(fixtures["stocks"][0])
+    stock["priceSource"] = "jquants_bars"
+    stock["fundamentalsSource"] = "edinet_xbrl"
+    row = evaluate_universe([stock], fixtures["assumptions"])[0]
+    assert row["priceSource"] == "jquants_bars"
+    assert row["fundamentalsSource"] == "edinet_xbrl"
+    detail = detail_row(row)
+    assert detail["priceSource"] == "jquants_bars"
+    assert detail["fundamentalsSource"] == "edinet_xbrl"
+    stock["priceSource"] = "  "
+    stock["fundamentalsSource"] = ""
+    blank = evaluate_universe([stock], fixtures["assumptions"])[0]
+    assert blank["priceSource"] is None
+    assert blank["fundamentalsSource"] is None

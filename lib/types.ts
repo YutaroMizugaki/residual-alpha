@@ -36,6 +36,10 @@ export type StockDetail = {
   ticker: string;
   companyName: string;
   price: number | null;
+  priceAsOf?: string | null;
+  priceSource?: string | null;
+  fundamentalsAsOf?: string | null;
+  fundamentalsSource?: string | null;
   betaRaw: number | null;
   betaAdjusted: number | null;
   betaStatus: string;
@@ -58,6 +62,4 @@ export type StockDetail = {
   eligible: boolean;
   exclusionReasons: ExclusionReason[];
   forecast: ForecastYear[];
-  priceAsOf?: string | null;
-  fundamentalsAsOf?: string | null;
 };

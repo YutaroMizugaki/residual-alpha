@@ -97,6 +97,11 @@ cache does not block a complete lower-tier cache. If nothing is complete,
 the first partial is kept. Names without a cached chart or financials stay
 ranking-ineligible; missing is not 0.
 
+Each stock row carries its own `priceSource` and `fundamentalsSource`.
+Universe `meta.json` stays the union across names (`jquants_bars+yahoo_chart`
+when auto mixes). The stock page reads the per-name labels, not the mix.
+Missing sources stay missing (`null`), not `0` and not another name's source.
+
 `refresh_public_data.py --source free` fetches only Yahoo even if keyed env
 vars are set. `--source jquants` / `--source edinet` fetch Yahoo plus that
 keyed cache when the matching key is present.

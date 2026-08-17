@@ -95,6 +95,8 @@ def test_missing_data_not_zero():
     assert result["bookValue"] is None
     assert result["intrinsicEquityValue"] is None
     assert result["intrinsicPrice"] is None
+    assert result["priceSource"] is None
+    assert result["fundamentalsSource"] is None
     assert 0 not in (
         result["bookValue"],
         result["intrinsicEquityValue"],

@@ -7,7 +7,7 @@ export function SiteFooter({ meta }: { meta: DataMeta }) {
         <p>{meta.disclaimerJa}</p>
         <p className="mt-1">
           Residual Alpha — Python computes valuation; this UI only displays
-          static JSON. Source: {meta.priceSource}
+          static JSON. Universe: {meta.priceSource} / {meta.fundamentalsSource}
           {meta.asOfDate ? ` (${meta.asOfDate})` : ""}.
         </p>
       </div>
