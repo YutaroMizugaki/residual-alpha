@@ -114,4 +114,4 @@ Risk 20
 
 Percentile ranks use only stocks that have the metric. Lower-is-better series use `100 − percentile`. Beta is not a higher-is-better percentile.
 
-Eligible stocks are ranked by total score. Incomplete fixture names are kept in JSON with `eligible: false` and `exclusionReasons`.
+Eligible stocks are ranked by total score. Incomplete names are kept in JSON with `eligible: false` and `exclusionReasons`.

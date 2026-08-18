@@ -14,11 +14,11 @@ Provider snapshot
 
 | Source | Prices | Fundamentals | API key | Default |
 | --- | --- | --- | --- | --- |
-| `fixture` | fictional JSON | fictional JSON | no | yes (CI) |
+| `auto` | complete series with more aligned returns: J-Quants daily AdjC vs Yahoo chart (J-Quants wins ties) | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | site/CI via `--recorded` (`tests/data`, no fetch) |
+| `fixture` | fictional JSON | fictional JSON | no | CLI default (engine tests only) |
 | `free` | Yahoo Finance chart JSON | Yahoo annual timeseries | no | no |
 | `jquants` | J-Quants daily AdjC, else Yahoo chart | J-Quants v2 `/fins/summary` FY rows | `JQUANTS_API_KEY` for live fetch (free plan is enough) | no |
 | `edinet` | Yahoo Finance chart JSON | EDINET yuho XBRL instance | `EDINET_API_KEY` to download zips | no |
-| `auto` | complete series with more aligned returns: J-Quants daily AdjC vs Yahoo chart (J-Quants wins ties) | first complete source per name: EDINET XBRL → J-Quants FY → Yahoo timeseries | keys only for live fetch of keyed caches | no |
 
 Yahoo timeseries fields (free source):
 
@@ -80,7 +80,10 @@ Stooq daily CSV files can still be parsed if an operator supplies them.
 ## Commands
 
 ```bash
-# default: fixture, deterministic, used by CI
+# site / CI: recorded auto from tests/data (no fetch, not data/raw)
+python scripts/build_public_data.py --source auto --recorded
+
+# engine tests: fictional fixture (do not commit over site JSON)
 python scripts/build_public_data.py
 
 # download Yahoo chart + fundamentals JSON (network; not run in CI)
@@ -179,8 +182,11 @@ fall through to Yahoo in `--source auto`, or stay ranking-ineligible on
 `--source jquants` / `--source edinet`. Missing is not 0.
 
 Do not commit API keys. `.env*` is gitignored. Do not commit live
-`public/data` from `--source auto` / `free` / `jquants` / `edinet`; CI rebuilds
-fixture JSON.
+`public/data` from operator `data/raw` (`--source auto` / `free` / `jquants` /
+`edinet` without `--recorded`). Restore the site with
+`python scripts/build_public_data.py --source auto --recorded`. CI rebuilds
+that recorded JSON and fails if `public/data` drifts. It does not fetch and
+does not use API keys.
 
 Optional overlay: `scripts/providers/fundamentals.json`. Empty by default.
 Overlay fills only fields that are still missing.

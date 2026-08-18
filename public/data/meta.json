@@ -1,12 +1,12 @@
 {
-  "source": "fixture",
-  "sourceLabel": "Fixture Data",
-  "priceSource": "fixture",
-  "fundamentalsSource": "fixture",
-  "marketSymbol": null,
-  "asOfDate": null,
+  "source": "auto",
+  "sourceLabel": "Auto Data Provider",
+  "priceSource": "yahoo_chart",
+  "fundamentalsSource": "edinet_xbrl",
+  "marketSymbol": "^N225",
+  "asOfDate": "2026-08-17",
   "priceLagNote": null,
   "priceLagNoteJa": null,
-  "disclaimerJa": "現在表示している銘柄および数値はテスト用fixtureです。",
-  "disclaimerEn": "Test data only. Tickers and figures are fictional, not live market prices."
+  "disclaimerJa": "価格は銘柄ごとに揃った系列のうち、リターン本数が多い方（同数なら J-Quants 日足 AdjC、それ以外は Yahoo chart）。市場は Yahoo 日経平均。財務は EDINET XBRL、J-Quants、Yahoo timeseries の順で最初に揃ったソースです。J-Quants 無料プランで足り、有料ライトは不要です。無料の日次足は約12週遅れです。欠損は 0 にしません。投資助言ではありません。",
+  "disclaimerEn": "Prices use the complete series with more aligned returns per name (J-Quants daily AdjC if tied, otherwise Yahoo chart). Market is Yahoo Nikkei 225. Fundamentals use the first complete source per name: EDINET XBRL, then J-Quants, then Yahoo timeseries. The J-Quants free plan is enough; a paid Light plan is not required. Free-plan daily bars can lag about 12 weeks. Missing values are not replaced with 0. Not investment advice."
 }

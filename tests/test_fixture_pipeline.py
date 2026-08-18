@@ -1,4 +1,4 @@
-"""End-to-end checks against the committed fictional fixture."""
+"""End-to-end checks against the fictional fixture engine path."""
 
 from __future__ import annotations
 
@@ -10,8 +10,6 @@ from providers.loader import load_fixture_snapshot
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = ROOT / "scripts" / "fixtures" / "stocks.json"
-RANKINGS_PATH = ROOT / "public" / "data" / "rankings.json"
-STOCKS_DIR = ROOT / "public" / "data" / "stocks"
 
 RANKING_FIELDS = [
     "rank",
@@ -113,9 +111,8 @@ def test_fixture_high_beta_not_top_ranked():
     assert high_beta["totalScore"] < low_beta["totalScore"]
 
 
-def test_public_json_matches_engine_and_schema():
+def test_fixture_ranking_and_detail_schema():
     universe = _universe()
-    public_rankings = json.loads(RANKINGS_PATH.read_text(encoding="utf-8"))
     expected = [ranking_row(row) for row in universe]
     expected.sort(
         key=lambda row: (
@@ -124,8 +121,7 @@ def test_public_json_matches_engine_and_schema():
             row["ticker"],
         )
     )
-    assert public_rankings == expected
-    for row in public_rankings:
+    for row in expected:
         for field in RANKING_FIELDS:
             assert field in row
         assert row["priceSource"] == "fixture"
@@ -140,25 +136,18 @@ def test_public_json_matches_engine_and_schema():
             assert row["roeCount"] == 3
 
     for row in universe:
-        public_detail = json.loads((STOCKS_DIR / f"{row['ticker']}.json").read_text(encoding="utf-8"))
-        assert public_detail == detail_row(row)
-        assert "forecast" in public_detail
-        assert "priceAsOf" in public_detail
-        assert "priceSource" in public_detail
-        assert "fundamentalsAsOf" in public_detail
-        assert "fundamentalsSource" in public_detail
-        assert public_detail["priceSource"] == "fixture"
-        assert public_detail["fundamentalsSource"] == "fixture"
+        detail = detail_row(row)
+        assert "forecast" in detail
+        assert "priceAsOf" in detail
+        assert "priceSource" in detail
+        assert "fundamentalsAsOf" in detail
+        assert "fundamentalsSource" in detail
+        assert detail["priceSource"] == "fixture"
+        assert detail["fundamentalsSource"] == "fixture"
         if row["ticker"] == "1006":
-            assert public_detail["roeCount"] is None
+            assert detail["roeCount"] is None
         else:
-            assert public_detail["roeCount"] == 3
-
-    meta = json.loads((ROOT / "public" / "data" / "meta.json").read_text(encoding="utf-8"))
-    assert meta["source"] == "fixture"
-    assert meta["sourceLabel"] == "Fixture Data"
-    assert meta["priceLagNote"] is None
-    assert meta["priceLagNoteJa"] is None
+            assert detail["roeCount"] == 3
 
 
 def test_evaluate_stock_passes_per_name_sources():

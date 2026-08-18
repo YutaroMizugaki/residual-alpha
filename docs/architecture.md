@@ -19,8 +19,11 @@ Provider snapshot
 
 TypeScript does not recompute Beta, CAPM, residual income, intrinsic price, or scores.
 
-Default provider is **fixture** (fictional issuers). Optional **free**,
-**jquants**, **edinet**, and **auto** providers. **jquants** prices prefer
+Default **site** provider is **auto** from recorded `tests/data` caches
+(`build_public_data.py --source auto --recorded`). Default **CLI** without
+flags is still **fixture** (fictional issuers, engine tests). Optional **free**,
+**jquants**, **edinet**, and live **auto** from `data/raw` remain operator
+paths. **jquants** prices prefer
 J-Quants daily AdjC, then Yahoo chart. The J-Quants **free plan is enough**;
 free-plan bars can lag about 12 weeks and that lag is labeled via
 `priceAsOf` / `priceLagNote`. **auto** prices pick the complete
@@ -48,7 +51,7 @@ No trading
 - `scripts/models/` — valuation math
 - `scripts/providers/` — fixture, Yahoo, J-Quants summary + daily bars, EDINET list + XBRL
 - `scripts/fixtures/stocks.json` — fictional inputs
-- `scripts/build_public_data.py` — writes `public/data/`
+- `scripts/build_public_data.py` — writes `public/data/` (site: `--source auto --recorded`)
 - `scripts/refresh_public_data.py` — optional operator fetch + rebuild (no cron)
 - `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
 - `scripts/compact_yahoo_charts.py` — optional compact/align of Yahoo chart JSON for recorded tests (no fetch, no cron)

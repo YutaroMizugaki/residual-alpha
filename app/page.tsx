@@ -16,7 +16,16 @@ export default async function HomePage() {
         JSON.
       </p>
       <ul className="mt-6 list-disc space-y-1 pl-5 text-slate-700">
-        <li>Default build is fixture data (deterministic, used by CI)</li>
+        <li>
+          The site ranking is recorded <code>--source auto</code> from
+          committed <code>tests/data</code> caches (10 TSE names). CI rebuilds
+          that JSON. It does not fetch Yahoo, J-Quants, or EDINET.
+        </li>
+        <li>
+          Fixture data (tickers 1001–1006) remains the default
+          <code>build_public_data.py</code> path for engine tests. Do not
+          commit it over the recorded site JSON.
+        </li>
         <li>
           Free Data Provider can load TSE prices from the Yahoo Finance chart
           API and annual equity/income/shares from Yahoo timeseries (no API
@@ -42,7 +51,15 @@ export default async function HomePage() {
           GitHub Actions cron
         </li>
         <li>No database or backend API</li>
-        {isFixture ? <li>Tickers 1001–1006 are fictional test companies</li> : null}
+        {isFixture ? (
+          <li>Tickers 1001–1006 are fictional test companies</li>
+        ) : (
+          <li>
+            Recorded prices and filings can lag. Each name shows its
+            <code>priceAsOf</code> and fundamentals as-of. Not investment
+            advice.
+          </li>
+        )}
       </ul>
       <p className="mt-8">
         <Link

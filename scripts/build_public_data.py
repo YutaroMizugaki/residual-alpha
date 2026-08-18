@@ -26,6 +26,18 @@ PUBLIC_DATA = ROOT / "public" / "data"
 RANKINGS_PATH = PUBLIC_DATA / "rankings.json"
 STOCKS_DIR = PUBLIC_DATA / "stocks"
 META_PATH = PUBLIC_DATA / "meta.json"
+RECORDED_DATA = ROOT / "tests" / "data"
+
+
+def recorded_cache_dirs() -> dict[str, Path]:
+    """Committed provider caches. No live fetch. Used by the site and CI."""
+    return {
+        "raw_dir": RECORDED_DATA / "yahoo",
+        "fundamentals_dir": RECORDED_DATA / "yahoo_fundamentals",
+        "jquants_dir": RECORDED_DATA / "jquants",
+        "jquants_bars_dir": RECORDED_DATA / "jquants_bars",
+        "edinet_dir": RECORDED_DATA / "edinet_xbrl",
+    }
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -53,42 +65,64 @@ def main() -> int:
     )
     parser.add_argument("--edinet-dir", default=str(ROOT / "data" / "raw" / "edinet_xbrl"))
     parser.add_argument(
+        "--recorded",
+        action="store_true",
+        help=(
+            "Read tests/data caches instead of data/raw. Site and CI use "
+            "--source auto --recorded. Does not fetch."
+        ),
+    )
+    parser.add_argument(
         "--fetch",
         action="store_true",
         help="free/jquants: download remote JSON (jquants live fetch needs JQUANTS_API_KEY)",
     )
     args = parser.parse_args()
+    if args.recorded and args.source == "fixture":
+        print("FAIL --recorded is not used with --source fixture", file=sys.stderr)
+        return 1
+    if args.recorded and args.fetch:
+        print("FAIL --recorded does not fetch", file=sys.stderr)
+        return 1
     if args.fetch and args.source not in {"free", "jquants"}:
         print(f"FAIL --fetch is not supported for --source {args.source}", file=sys.stderr)
         return 1
+
+    dirs = recorded_cache_dirs() if args.recorded else {
+        "raw_dir": Path(args.raw_dir),
+        "fundamentals_dir": Path(args.fundamentals_dir),
+        "jquants_dir": Path(args.jquants_dir),
+        "jquants_bars_dir": Path(args.jquants_bars_dir),
+        "edinet_dir": Path(args.edinet_dir),
+    }
 
     if args.source == "fixture":
         snapshot = load_fixture_snapshot()
     elif args.source == "free":
         snapshot = load_free_snapshot(
-            raw_dir=Path(args.raw_dir),
-            fundamentals_dir=Path(args.fundamentals_dir),
+            raw_dir=dirs["raw_dir"],
+            fundamentals_dir=dirs["fundamentals_dir"],
             fetch=args.fetch,
         )
     elif args.source == "jquants":
         snapshot = load_jquants_snapshot(
-            raw_dir=Path(args.raw_dir),
-            jquants_dir=Path(args.jquants_dir),
-            jquants_bars_dir=Path(args.jquants_bars_dir),
+            raw_dir=dirs["raw_dir"],
+            jquants_dir=dirs["jquants_dir"],
+            jquants_bars_dir=dirs["jquants_bars_dir"],
             fetch=args.fetch,
         )
     elif args.source == "edinet":
         snapshot = load_edinet_snapshot(
-            raw_dir=Path(args.raw_dir),
-            edinet_dir=Path(args.edinet_dir),
+            raw_dir=dirs["raw_dir"],
+            edinet_dir=dirs["edinet_dir"],
         )
     else:
         snapshot = load_auto_snapshot(
-            raw_dir=Path(args.raw_dir),
-            fundamentals_dir=Path(args.fundamentals_dir),
-            jquants_dir=Path(args.jquants_dir),
-            jquants_bars_dir=Path(args.jquants_bars_dir),
-            edinet_dir=Path(args.edinet_dir),
+            raw_dir=dirs["raw_dir"],
+            fundamentals_dir=dirs["fundamentals_dir"],
+            jquants_dir=dirs["jquants_dir"],
+            jquants_bars_dir=dirs["jquants_bars_dir"],
+            edinet_dir=dirs["edinet_dir"],
         )
 
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
