@@ -40,6 +40,15 @@ def test_edinet_yuho_history_unique_period_end():
     assert jt[0].doc_type_code == "140"
 
 
+def test_edinet_yuho_history_matches_edinet_code_when_sec_code_null():
+    payload = json.loads((EDINET_DIR / "documents.json").read_text(encoding="utf-8"))
+    documents = parse_edinet_documents(payload)
+    sony_fg = yuho_history(documents, "87290", edinet_code="E05714")
+    assert [doc.doc_id for doc in sony_fg] == ["S100SONYFG"]
+    assert sony_fg[0].sec_code is None
+    assert sony_fg[0].edinet_code == "E05714"
+
+
 def test_edinet_unauthorized_json_is_fetch_error():
     payload = json.loads((EDINET_DIR / "unauthorized.json").read_text(encoding="utf-8"))
     with pytest.raises(FetchError, match="401"):

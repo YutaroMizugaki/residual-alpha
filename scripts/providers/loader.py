@@ -137,6 +137,13 @@ def edinet_sec_code(item: dict[str, Any]) -> str:
     return jquants_code(item)
 
 
+def edinet_code(item: dict[str, Any]) -> str | None:
+    value = item.get("edinetCode")
+    if value in (None, ""):
+        return None
+    return str(value).strip()
+
+
 def _blank_stock(ticker: str, company_name: str) -> dict[str, Any]:
     return {
         "ticker": ticker,

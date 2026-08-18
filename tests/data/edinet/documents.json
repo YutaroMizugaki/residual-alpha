@@ -2,7 +2,7 @@
   "metadata": {
     "status": "200",
     "resultset": {
-      "count": 3
+      "count": 4
     }
   },
   "results": [
@@ -40,6 +40,15 @@
       "filerName": "日本たばこ産業株式会社",
       "docTypeCode": "140",
       "periodEnd": "2023-09-30",
+      "xbrlFlag": "1"
+    },
+    {
+      "docID": "S100SONYFG",
+      "edinetCode": "E05714",
+      "secCode": null,
+      "filerName": "ソニーフィナンシャルグループ株式会社",
+      "docTypeCode": "120",
+      "periodEnd": "2025-03-31",
       "xbrlFlag": "1"
     }
   ]

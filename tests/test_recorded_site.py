@@ -41,6 +41,7 @@ EDINET_COMPLETE = EDINET_TEN | {
     "8766",
     "9434",
     "9983",
+    "3382",
 }
 INCOMPLETE = {"8729"}
 
@@ -100,8 +101,8 @@ def test_public_json_matches_recorded_auto_engine():
         assert row["returnCount"] is not None
         if row["ticker"] in INCOMPLETE:
             assert row["eligible"] is False
-            assert row["roeCount"] is None
-            assert row["fundamentalsSource"] == "yahoo_timeseries"
+            assert row["roeCount"] == 3
+            assert row["fundamentalsSource"] == "edinet_xbrl"
             continue
         assert row["eligible"] is True
         assert row["returnCount"] >= 199
