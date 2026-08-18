@@ -46,7 +46,7 @@ TREASURY_SHARE_NAMES = (
     "NumberOfTreasuryStockAtTheEndOfFiscalYear",
     "TotalNumberOfSharesHeldTreasurySharesEtc",
 )
-STATEMENT_YEARS = 2
+STATEMENT_YEARS = 3
 YEAR_LABELS = (
     "CurrentYear",
     "Prior1Year",
@@ -283,9 +283,9 @@ def _fundamentals_from_maps(
     shares: dict[date, float] = {}
     for period in set(issued) | set(treasury):
         issued_n = issued.get(period)
-        treasury_n = treasury.get(period)
-        if issued_n is None or treasury_n is None:
+        if issued_n is None:
             continue
+        treasury_n = treasury.get(period, 0.0)
         outstanding = issued_n - treasury_n
         if outstanding > 0:
             shares[period] = outstanding

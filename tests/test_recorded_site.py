@@ -42,8 +42,9 @@ EDINET_COMPLETE = EDINET_TEN | {
     "9434",
     "9983",
     "3382",
+    "2914",
+    "8729",
 }
-INCOMPLETE = {"8729"}
 
 
 def _recorded_snapshot():
@@ -99,11 +100,6 @@ def test_public_json_matches_recorded_auto_engine():
         assert row["priceAsOf"] is not None
         assert row["fundamentalsAsOf"] is not None
         assert row["returnCount"] is not None
-        if row["ticker"] in INCOMPLETE:
-            assert row["eligible"] is False
-            assert row["roeCount"] == 3
-            assert row["fundamentalsSource"] == "edinet_xbrl"
-            continue
         assert row["eligible"] is True
         assert row["returnCount"] >= 199
         assert row["roeCount"] >= 3
