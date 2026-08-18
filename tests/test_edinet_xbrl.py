@@ -250,7 +250,9 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
         "8001",
         "8058",
         "8316",
+        "8766",
         "9434",
+        "7974",
     }
     assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert toyota["priceSource"] == "yahoo_chart"
@@ -263,11 +265,14 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["6861"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["7267"]["eligible"] is True
     assert by_ticker["7267"]["latestRoe"] < 0
+    assert by_ticker["7974"]["eligible"] is True
+    assert by_ticker["7974"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["8766"]["eligible"] is True
+    assert by_ticker["8766"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["3382"]["eligible"] is False
+    assert by_ticker["3382"]["roeCount"] == 2
+    assert "insufficient_roe_history" in by_ticker["3382"]["exclusionReasons"]
     assert by_ticker["8001"]["eligible"] is True
-    assert by_ticker["7974"]["eligible"] is False
-    assert by_ticker["7974"]["bookValue"] is not None
-    assert by_ticker["7974"]["roeCount"] == 2
-    assert "insufficient_roe_history" in by_ticker["7974"]["exclusionReasons"]
     assert by_ticker["2914"]["bookValue"] is None
     assert "missing_book_value" in by_ticker["2914"]["exclusionReasons"]
 
@@ -477,6 +482,7 @@ def test_recorded_extra_edinet_is_complete():
         "80010",
         "80580",
         "83160",
+        "87660",
         "94340",
     ]
     for code in extras:
@@ -502,11 +508,10 @@ def test_recorded_partial_edinet_is_not_padded():
         "63670",
         "70110",
         "77410",
-        "79740",
         "80310",
         "84110",
-        "87660",
         "94330",
+        "33820",
     ]
     for code in extras:
         fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)

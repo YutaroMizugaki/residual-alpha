@@ -36,9 +36,11 @@ EDINET_COMPLETE = set(EDINET_TEN) | {
     "6503",
     "6857",
     "7267",
+    "7974",
     "8001",
     "8058",
     "8316",
+    "8766",
     "9434",
 }
 TICKERS = EDINET_TEN
@@ -382,7 +384,8 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
         assert listed["roeCount"] == by_ticker[ticker]["roeCount"]
     for ticker in EDINET_COMPLETE:
         assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
-    assert by_ticker["7974"]["fundamentalsSource"] == "yahoo_timeseries"
+    assert by_ticker["7974"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["8766"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["8001"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7267"]["latestRoe"] < 0
