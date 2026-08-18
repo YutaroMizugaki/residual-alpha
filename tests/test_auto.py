@@ -44,9 +44,11 @@ EDINET_COMPLETE = set(EDINET_TEN) | {
     "9434",
     "9983",
     "3382",
+    "2914",
+    "8729",
 }
 TICKERS = EDINET_TEN
-INCOMPLETE = {"8729"}
+INCOMPLETE: set[str] = set()
 EXTRAS = [ticker for ticker in TICKERS if ticker not in CORE]
 POISON_BOOK = 1.0
 
@@ -367,7 +369,6 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
     by_ticker = {row["ticker"]: row for row in computed}
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
     assert EDINET_COMPLETE <= set(ranked)
-    assert "8729" not in ranked
     for ticker in tickers:
         assert by_ticker[ticker]["price"] is not None
         assert by_ticker[ticker]["priceSource"] == "yahoo_chart"
@@ -391,7 +392,7 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
     assert by_ticker["7974"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["8766"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["9983"]["fundamentalsSource"] == "edinet_xbrl"
-    assert by_ticker["2914"]["fundamentalsSource"] == "yahoo_timeseries"
+    assert by_ticker["2914"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7267"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)

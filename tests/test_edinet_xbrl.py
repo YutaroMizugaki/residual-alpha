@@ -148,14 +148,14 @@ def test_edinet_xbrl_usd_equity_rejected():
     assert fundamentals.book_value is None
 
 
-def test_edinet_xbrl_missing_treasury_leaves_shares_missing():
+def test_edinet_xbrl_missing_treasury_defaults_to_zero_shares():
     xml = make_ifrs_xbrl(TOYOTA_ROWS[:1])
     xml = xml.replace(
         '<jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI contextRef="CurrentYearInstant" unitRef="Shares" decimals="0">0</jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI>',
         "",
     )
     fundamentals = parse_edinet_instance_xml(xml)
-    assert fundamentals.shares_outstanding is None
+    assert fundamentals.shares_outstanding == pytest.approx(13_033.384474)
     assert fundamentals.book_value == pytest.approx(39_918_854.0)
 
 
@@ -255,6 +255,8 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
         "7974",
         "9983",
         "3382",
+        "2914",
+        "8729",
     }
     assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert toyota["priceSource"] == "yahoo_chart"
@@ -273,11 +275,10 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["8766"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["9983"]["eligible"] is True
     assert by_ticker["9983"]["fundamentalsSource"] == "edinet_xbrl"
-    assert by_ticker["2914"]["eligible"] is False
+    assert by_ticker["2914"]["eligible"] is True
     assert by_ticker["2914"]["fundamentalsSource"] == "edinet_xbrl"
-    assert by_ticker["2914"]["roeCount"] == 2
+    assert by_ticker["2914"]["roeCount"] == 3
     assert by_ticker["2914"]["bookValue"] is not None
-    assert "insufficient_roe_history" in by_ticker["2914"]["exclusionReasons"]
     assert by_ticker["8001"]["eligible"] is True
 
 
@@ -518,7 +519,6 @@ def test_recorded_partial_edinet_is_not_padded():
         "80310",
         "84110",
         "94330",
-        "29140",
     ]
     for code in extras:
         fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)
