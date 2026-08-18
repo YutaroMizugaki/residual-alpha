@@ -224,14 +224,23 @@ def test_jquants_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["6861"]["roeCount"] == 1
     assert "insufficient_roe_history" in by_ticker["6861"]["exclusionReasons"]
     extras = [row for row in computed if row["ticker"] not in {"7203", "6758", "9984"}]
-    assert len(extras) == 7
-    for row in extras:
+    jq_incomplete = [row for row in extras if row["ticker"] in {
+        "6861", "6501", "8035", "4063", "8306", "9432", "6098"
+    }]
+    assert len(jq_incomplete) == 7
+    for row in jq_incomplete:
         assert row["eligible"] is False
         assert row["bookValue"] is not None
         assert row["bookValue"] != 0
         assert row["roeCount"] == 1
         assert "insufficient_roe_history" in row["exclusionReasons"]
         assert row["fundamentalsSource"] == "jquants_summary"
+    for row in extras:
+        if row["ticker"] in {"6861", "6501", "8035", "4063", "8306", "9432", "6098"}:
+            continue
+        assert row["eligible"] is False
+        assert row["bookValue"] is None
+        assert row["fundamentalsSource"] is None
 
 
 def test_recorded_extra_jquants_fy_is_not_padded():

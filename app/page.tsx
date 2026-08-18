@@ -18,7 +18,7 @@ export default async function HomePage() {
       <ul className="mt-6 list-disc space-y-1 pl-5 text-slate-700">
         <li>
           The site ranking is recorded <code>--source auto</code> from
-          committed <code>tests/data</code> caches (10 TSE names). CI rebuilds
+          committed <code>tests/data</code> caches (TOPIX Core30). CI rebuilds
           that JSON. It does not fetch Yahoo, J-Quants, or EDINET.
         </li>
         <li>

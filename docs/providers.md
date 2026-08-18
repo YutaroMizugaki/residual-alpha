@@ -86,12 +86,18 @@ python scripts/build_public_data.py --source auto --recorded
 # engine tests: fictional fixture (do not commit over site JSON)
 python scripts/build_public_data.py
 
+# add TSE names from recorded TOPIX Core30 or 4-digit tickers
+# (not CI; derives Yahoo/J-Quants/EDINET codes; does not fetch; does not write public/data)
+python scripts/expand_universe.py --from topix-core30 --dry-run
+python scripts/expand_universe.py --ticker 7974 --name 7974=Nintendo
+
 # download Yahoo chart + fundamentals JSON (network; not run in CI)
-python scripts/fetch_free_data.py
+python scripts/fetch_free_data.py --skip-existing
 
 # compact live Yahoo charts to timestamp + close, inner-join to Nikkei
 # (not CI; does not write public/data; missing days dropped, not filled with 0)
 python scripts/compact_yahoo_charts.py --src data/raw/yahoo --dst tests/data/yahoo --align
+# --existing-only skips names with no cache; --keep-existing leaves recorded charts in place
 
 # rebuild UI JSON from cached Yahoo files
 python scripts/build_public_data.py --source free
@@ -155,18 +161,22 @@ script. It does not crawl EDINET filing dates. Repeat
 `fetch_edinet_list.py --date YYYY-MM-DD` for each filing day if you need
 new yuho zips. That is not a range crawl.
 
-The listed-name universe in `scripts/providers/universe.json` has 10 tickers.
-Recorded Yahoo chart and annual timeseries cover all 10. Charts are ~1y of
-daily closes, inner-joined to Nikkei 225 (missing days dropped, not filled
-with 0). `scripts/compact_yahoo_charts.py --align` writes that compact form
-from a live Yahoo chart dump; it does not fetch and does not write
-`public/data`. Recorded J-Quants FY + AdjC cover all 10 names.
+The listed-name universe in `scripts/providers/universe.json` is TOPIX Core30
+(recorded as of 2025-10-31, plus 8729). `scripts/expand_universe.py --from
+topix-core30` derives Yahoo / J-Quants / EDINET codes from 4-digit tickers.
+Recorded Yahoo chart and annual timeseries cover the universe. Charts for the
+original 10 are ~1y of daily closes, inner-joined to Nikkei 225 (missing days
+dropped, not filled with 0). Added Core30 names are compacted Yahoo charts
+kept beside those files (`--keep-existing`). `scripts/compact_yahoo_charts.py
+--align` writes the inner-join compact form from a live dump; it does not
+fetch and does not write `public/data`. Recorded J-Quants FY + AdjC cover the
+original 10 names.
 7203 / 6758 / 9984 keep four FY years and short Yahoo-aligned bars for
 parser tests. The other seven are free-plan dumps: about two FY years
 (one beginning-book ROE, not padded) and daily AdjC through the plan
-window (`priceAsOf` 2026-05-25). Recorded EDINET yuho XBRL covers all 10
-names. 7203 / 6758 / 9984 keep synthetic four-year fixtures. The other
-seven are compacted PublicDoc facts from 2023–2026 yuho zips (3 beginning-book
+window (`priceAsOf` 2026-05-25). Recorded EDINET yuho XBRL covers the original
+10 names. 7203 / 6758 / 9984 keep synthetic four-year fixtures. The other
+seven of those 10 are compacted PublicDoc facts from 2023–2026 yuho zips (3 beginning-book
 ROE years; missing treasury is not 0). `scripts/compact_edinet_xbrl.py`
 writes instance XML from a live zip dump; `--existing-only` skips names with
 no cache instead of failing; `--keep-existing` does not overwrite destination

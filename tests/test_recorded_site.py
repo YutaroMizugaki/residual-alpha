@@ -17,8 +17,7 @@ RANKINGS_PATH = ROOT / "public" / "data" / "rankings.json"
 STOCKS_DIR = ROOT / "public" / "data" / "stocks"
 META_PATH = ROOT / "public" / "data" / "meta.json"
 UNIVERSE_PATH = ROOT / "scripts" / "providers" / "universe.json"
-
-TICKERS = [
+EDINET_TEN = {
     "7203",
     "6758",
     "9984",
@@ -29,7 +28,8 @@ TICKERS = [
     "8306",
     "9432",
     "6098",
-]
+}
+INCOMPLETE = {"8729"}
 
 
 def _recorded_snapshot():
@@ -74,37 +74,42 @@ def test_public_json_matches_recorded_auto_engine():
     )
     public_rankings = json.loads(RANKINGS_PATH.read_text(encoding="utf-8"))
     assert public_rankings == expected
-    assert [row["ticker"] for row in public_rankings] == [
-        row["ticker"] for row in expected
-    ]
     listed = [str(item["ticker"]) for item in load_universe(UNIVERSE_PATH)["stocks"]]
-    assert listed == TICKERS
-    assert {row["ticker"] for row in public_rankings} == set(TICKERS)
+    assert [row["ticker"] for row in public_rankings] == [row["ticker"] for row in expected]
+    assert {row["ticker"] for row in public_rankings} == set(listed)
+    assert EDINET_TEN <= set(listed)
+    assert "7974" in listed
     for row in public_rankings:
         assert row["ticker"] not in {"1001", "1002", "1003", "1004", "1005", "1006"}
-        assert row["eligible"] is True
         assert row["priceSource"] == "yahoo_chart"
-        assert row["fundamentalsSource"] == "edinet_xbrl"
         assert row["priceAsOf"] is not None
         assert row["fundamentalsAsOf"] is not None
         assert row["returnCount"] is not None
-        assert row["roeCount"] is not None
+        if row["ticker"] in INCOMPLETE:
+            assert row["eligible"] is False
+            assert row["roeCount"] is None
+            assert row["fundamentalsSource"] == "yahoo_timeseries"
+            continue
+        assert row["eligible"] is True
         assert row["returnCount"] >= 199
         assert row["roeCount"] >= 3
+        if row["ticker"] in EDINET_TEN:
+            assert row["fundamentalsSource"] == "edinet_xbrl"
+        else:
+            assert row["fundamentalsSource"] == "yahoo_timeseries"
 
     for row in universe:
         public_detail = json.loads((STOCKS_DIR / f"{row['ticker']}.json").read_text(encoding="utf-8"))
         assert public_detail == detail_row(row)
         assert public_detail["priceSource"] == "yahoo_chart"
-        assert public_detail["fundamentalsSource"] == "edinet_xbrl"
 
     leftover = sorted(path.name for path in STOCKS_DIR.glob("*.json"))
-    assert leftover == sorted(f"{ticker}.json" for ticker in TICKERS)
+    assert leftover == sorted(f"{ticker}.json" for ticker in listed)
 
     meta = json.loads(META_PATH.read_text(encoding="utf-8"))
     assert meta == snapshot.meta()
     assert meta["source"] == "auto"
     assert meta["priceSource"] == "yahoo_chart"
-    assert meta["fundamentalsSource"] == "edinet_xbrl"
+    assert meta["fundamentalsSource"] == "edinet_xbrl+yahoo_timeseries"
     assert meta["priceLagNote"] is None
     assert "Not investment advice" in meta["disclaimerEn"]

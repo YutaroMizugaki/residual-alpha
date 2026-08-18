@@ -43,14 +43,25 @@ def compact_chart_dir(
     universe: dict,
     align: bool = False,
     dry_run: bool = False,
+    existing_only: bool = False,
+    keep_existing: bool = False,
 ) -> int:
     """Compact universe charts only. Does not touch public/data or live fetch."""
     payloads: dict[str, dict] = {}
     failed = 0
+    skipped_existing = 0
     for symbol in chart_symbols(universe):
         name = cache_filename(symbol)
+        out = dst / name
+        if keep_existing and out.exists():
+            print(f"SKIP existing {name}")
+            skipped_existing += 1
+            continue
         path = src / name
         if not path.exists():
+            if existing_only:
+                print(f"SKIP missing {path}")
+                continue
             print(f"FAIL missing {path}")
             failed += 1
             continue
@@ -60,6 +71,12 @@ def compact_chart_dir(
             print(f"FAIL {name}: {exc}")
             failed += 1
     if failed:
+        return 1
+    if not payloads:
+        if skipped_existing:
+            print("OK destination caches already exist")
+            return 0
+        print("FAIL no universe Yahoo charts to compact")
         return 1
     try:
         compacted = compact_yahoo_charts(payloads, align=align)
@@ -93,6 +110,16 @@ def main() -> int:
         help="Inner-join valid timestamps across market + universe names. Do not fill 0.",
     )
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--existing-only",
+        action="store_true",
+        help="Skip universe names with no cache instead of failing. Does not invent missing names.",
+    )
+    parser.add_argument(
+        "--keep-existing",
+        action="store_true",
+        help="Do not overwrite destination chart JSON that already exists.",
+    )
     args = parser.parse_args()
     try:
         universe = load_universe(Path(args.universe))
@@ -106,6 +133,8 @@ def main() -> int:
         universe=universe,
         align=args.align,
         dry_run=args.dry_run,
+        existing_only=args.existing_only,
+        keep_existing=args.keep_existing,
     )
 
 

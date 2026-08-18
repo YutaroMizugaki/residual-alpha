@@ -13,7 +13,7 @@
     "J-Quants free-plan daily bars can lag about 12 weeks. That is accepted; priceAsOf is the last close used. A paid Light plan is not required.",
     "Auto source fundamentals: EDINET XBRL, then J-Quants FY summary, then Yahoo timeseries.",
     "Names without cached financials stay ranking-ineligible. Missing is not 0.",
-    "Recorded Yahoo chart/timeseries cover all 10 names (~1y daily closes aligned to Nikkei 225). Recorded J-Quants FY + AdjC cover all 10: 7203/6758/9984 keep 4 FY years and short Yahoo-aligned bars; the other 7 are free-plan dumps (~2 FY years, AdjC through 2026-05-25). Recorded EDINET yuho XBRL covers all 10 (7203/6758/9984 keep synthetic 4-year fixtures; the other 7 are compacted PublicDoc facts from 2023-2026 yuho zips)."
+    "Recorded Yahoo chart/timeseries cover TOPIX Core30 (as of 2025-10-31, plus 8729). Original 10 keep ~1y daily closes aligned to Nikkei 225. Added names are compacted Yahoo charts (not re-aligned across the old 10). Recorded J-Quants FY + AdjC cover the original 10: 7203/6758/9984 keep 4 FY years and short Yahoo-aligned bars; the other 7 are free-plan dumps (~2 FY years, AdjC through 2026-05-25). Recorded EDINET yuho XBRL covers the original 10 (7203/6758/9984 keep synthetic 4-year fixtures; the other 7 of those 10 are compacted PublicDoc facts from 2023-2026 yuho zips). Added Core30 names use Yahoo timeseries until EDINET caches exist. 8729 lacks 3 beginning-book ROE years and stays ranking-ineligible; missing is not 0."
   ],
   "stocks": [
     {
@@ -95,6 +95,174 @@
       "jquantsCode": "60980",
       "edinetSecCode": "60980",
       "companyName": "Recruit Holdings"
+    },
+    {
+      "ticker": "2914",
+      "yahooSymbol": "2914.T",
+      "stooqSymbol": "2914.jp",
+      "jquantsCode": "29140",
+      "edinetSecCode": "29140",
+      "companyName": "Japan Tobacco"
+    },
+    {
+      "ticker": "3382",
+      "yahooSymbol": "3382.T",
+      "stooqSymbol": "3382.jp",
+      "jquantsCode": "33820",
+      "edinetSecCode": "33820",
+      "companyName": "Seven & i Holdings"
+    },
+    {
+      "ticker": "4502",
+      "yahooSymbol": "4502.T",
+      "stooqSymbol": "4502.jp",
+      "jquantsCode": "45020",
+      "edinetSecCode": "45020",
+      "companyName": "Takeda Pharmaceutical"
+    },
+    {
+      "ticker": "4568",
+      "yahooSymbol": "4568.T",
+      "stooqSymbol": "4568.jp",
+      "jquantsCode": "45680",
+      "edinetSecCode": "45680",
+      "companyName": "Daiichi Sankyo"
+    },
+    {
+      "ticker": "6367",
+      "yahooSymbol": "6367.T",
+      "stooqSymbol": "6367.jp",
+      "jquantsCode": "63670",
+      "edinetSecCode": "63670",
+      "companyName": "Daikin Industries"
+    },
+    {
+      "ticker": "6503",
+      "yahooSymbol": "6503.T",
+      "stooqSymbol": "6503.jp",
+      "jquantsCode": "65030",
+      "edinetSecCode": "65030",
+      "companyName": "Mitsubishi Electric"
+    },
+    {
+      "ticker": "6857",
+      "yahooSymbol": "6857.T",
+      "stooqSymbol": "6857.jp",
+      "jquantsCode": "68570",
+      "edinetSecCode": "68570",
+      "companyName": "Advantest"
+    },
+    {
+      "ticker": "7011",
+      "yahooSymbol": "7011.T",
+      "stooqSymbol": "7011.jp",
+      "jquantsCode": "70110",
+      "edinetSecCode": "70110",
+      "companyName": "Mitsubishi Heavy Industries"
+    },
+    {
+      "ticker": "7267",
+      "yahooSymbol": "7267.T",
+      "stooqSymbol": "7267.jp",
+      "jquantsCode": "72670",
+      "edinetSecCode": "72670",
+      "companyName": "Honda Motor"
+    },
+    {
+      "ticker": "7741",
+      "yahooSymbol": "7741.T",
+      "stooqSymbol": "7741.jp",
+      "jquantsCode": "77410",
+      "edinetSecCode": "77410",
+      "companyName": "HOYA"
+    },
+    {
+      "ticker": "7974",
+      "yahooSymbol": "7974.T",
+      "stooqSymbol": "7974.jp",
+      "jquantsCode": "79740",
+      "edinetSecCode": "79740",
+      "companyName": "Nintendo"
+    },
+    {
+      "ticker": "8001",
+      "yahooSymbol": "8001.T",
+      "stooqSymbol": "8001.jp",
+      "jquantsCode": "80010",
+      "edinetSecCode": "80010",
+      "companyName": "Itochu"
+    },
+    {
+      "ticker": "8031",
+      "yahooSymbol": "8031.T",
+      "stooqSymbol": "8031.jp",
+      "jquantsCode": "80310",
+      "edinetSecCode": "80310",
+      "companyName": "Mitsui & Co."
+    },
+    {
+      "ticker": "8058",
+      "yahooSymbol": "8058.T",
+      "stooqSymbol": "8058.jp",
+      "jquantsCode": "80580",
+      "edinetSecCode": "80580",
+      "companyName": "Mitsubishi Corporation"
+    },
+    {
+      "ticker": "8316",
+      "yahooSymbol": "8316.T",
+      "stooqSymbol": "8316.jp",
+      "jquantsCode": "83160",
+      "edinetSecCode": "83160",
+      "companyName": "Sumitomo Mitsui Financial Group"
+    },
+    {
+      "ticker": "8411",
+      "yahooSymbol": "8411.T",
+      "stooqSymbol": "8411.jp",
+      "jquantsCode": "84110",
+      "edinetSecCode": "84110",
+      "companyName": "Mizuho Financial Group"
+    },
+    {
+      "ticker": "8729",
+      "yahooSymbol": "8729.T",
+      "stooqSymbol": "8729.jp",
+      "jquantsCode": "87290",
+      "edinetSecCode": "87290",
+      "companyName": "Sony Financial Group"
+    },
+    {
+      "ticker": "8766",
+      "yahooSymbol": "8766.T",
+      "stooqSymbol": "8766.jp",
+      "jquantsCode": "87660",
+      "edinetSecCode": "87660",
+      "companyName": "Tokio Marine Holdings"
+    },
+    {
+      "ticker": "9433",
+      "yahooSymbol": "9433.T",
+      "stooqSymbol": "9433.jp",
+      "jquantsCode": "94330",
+      "edinetSecCode": "94330",
+      "companyName": "KDDI"
+    },
+    {
+      "ticker": "9434",
+      "yahooSymbol": "9434.T",
+      "stooqSymbol": "9434.jp",
+      "jquantsCode": "94340",
+      "edinetSecCode": "94340",
+      "companyName": "SoftBank Corp."
+    },
+    {
+      "ticker": "9983",
+      "yahooSymbol": "9983.T",
+      "stooqSymbol": "9983.jp",
+      "jquantsCode": "99830",
+      "edinetSecCode": "99830",
+      "companyName": "Fast Retailing"
     }
   ]
 }

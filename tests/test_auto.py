@@ -19,7 +19,7 @@ UNIVERSE_PATH = ROOT / "scripts" / "providers" / "universe.json"
 
 TOYOTA_BOOK = 39_918_854.0
 CORE = {"7203", "6758", "9984"}
-TICKERS = [
+EDINET_TEN = [
     "7203",
     "6758",
     "9984",
@@ -31,6 +31,8 @@ TICKERS = [
     "9432",
     "6098",
 ]
+TICKERS = EDINET_TEN
+INCOMPLETE = {"8729"}
 EXTRAS = [ticker for ticker in TICKERS if ticker not in CORE]
 POISON_BOOK = 1.0
 
@@ -314,10 +316,11 @@ def test_auto_does_not_mix_sources_inside_one_name(tmp_path: Path):
     assert snapshot.fundamentals_source == "edinet_xbrl"
 
 
-def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
+def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
     universe = load_universe(UNIVERSE_PATH)
     tickers = [str(item["ticker"]) for item in universe["stocks"]]
-    assert tickers == TICKERS
+    assert set(EDINET_TEN) <= set(tickers)
+    assert "7974" in tickers
     snapshot = load_auto_snapshot(
         raw_dir=YAHOO_DIR,
         fundamentals_dir=FUND_DIR,
@@ -330,42 +333,53 @@ def test_expanded_universe_yahoo_cache_ranks_all_ten(tmp_path: Path):
     assert snapshot.meta()["priceLagNote"] is None
     assert [row["ticker"] for row in snapshot.stocks] == tickers
     extras = [row for row in snapshot.stocks if row["ticker"] not in CORE]
-    assert len(extras) == 7
+    assert len(extras) == len(tickers) - len(CORE)
     for stock in extras:
         assert stock["price"] is not None
         assert stock["price"] != 0
         assert stock["bookValue"] is not None
         assert stock["bookValue"] != 0
-        assert stock["latestRoe"] is not None
         assert stock["priceSource"] == "yahoo_chart"
-        assert stock["fundamentalsSource"] == "edinet_xbrl"
+        if stock["ticker"] in EDINET_TEN:
+            assert stock["latestRoe"] is not None
+            assert stock["fundamentalsSource"] == "edinet_xbrl"
+        elif stock["ticker"] in INCOMPLETE:
+            assert stock["fundamentalsSource"] == "yahoo_timeseries"
+        else:
+            assert stock["latestRoe"] is not None
+            assert stock["fundamentalsSource"] == "yahoo_timeseries"
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     by_ticker = {row["ticker"]: row for row in computed}
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
-    assert set(ranked) == set(TICKERS)
-    for ticker in TICKERS:
-        assert by_ticker[ticker]["eligible"] is True
-        assert by_ticker[ticker]["bookValue"] is not None
+    assert set(EDINET_TEN) <= set(ranked)
+    assert "8729" not in ranked
+    for ticker in tickers:
         assert by_ticker[ticker]["price"] is not None
         assert by_ticker[ticker]["priceSource"] == "yahoo_chart"
-        assert by_ticker[ticker]["returnCount"] >= 199
-        assert by_ticker[ticker]["roeCount"] >= 3
         assert by_ticker[ticker]["priceAsOf"] is not None
         listed = ranking_row(by_ticker[ticker])
         assert listed["priceAsOf"] == by_ticker[ticker]["priceAsOf"]
         assert listed["fundamentalsAsOf"] == by_ticker[ticker]["fundamentalsAsOf"]
+        if ticker in INCOMPLETE:
+            assert by_ticker[ticker]["eligible"] is False
+            assert by_ticker[ticker]["roeCount"] is None
+            assert "missing_roe" in by_ticker[ticker]["exclusionReasons"]
+            continue
+        assert by_ticker[ticker]["eligible"] is True
+        assert by_ticker[ticker]["bookValue"] is not None
+        assert by_ticker[ticker]["returnCount"] >= 199
+        assert by_ticker[ticker]["roeCount"] >= 3
         assert listed["roeCount"] == by_ticker[ticker]["roeCount"]
-        assert listed["priceAsOf"] is not None
-        assert listed["fundamentalsAsOf"] is not None
-    for ticker in TICKERS:
+    for ticker in EDINET_TEN:
         assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["7974"]["fundamentalsSource"] == "yahoo_timeseries"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
     assert by_ticker["7203"]["priceAsOf"] == "2026-08-17"
     assert by_ticker["7203"]["fundamentalsAsOf"] == "2026-03-31"
     assert by_ticker["6861"]["fundamentalsAsOf"] == "2026-03-20"
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)
-    assert snapshot.fundamentals_source == "edinet_xbrl"
+    assert snapshot.fundamentals_source == "edinet_xbrl+yahoo_timeseries"
 
 
 def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
@@ -384,7 +398,7 @@ def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):
         fundamentals_path=tmp_path / "empty.json",
     )
     extras = [row for row in snapshot.stocks if row["ticker"] not in CORE]
-    assert len(extras) == 7
+    assert len(extras) == len(snapshot.stocks) - len(CORE)
     for stock in extras:
         assert stock["price"] is None
         assert stock["bookValue"] is None

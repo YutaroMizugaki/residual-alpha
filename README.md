@@ -2,7 +2,7 @@
 
 Residual-income ranking. Python computes valuation; Next.js displays static JSON.
 
-**Current status:** Fixture engine tests + a 10-name listed universe on the site. The committed UI JSON is `--source auto --recorded` (Yahoo / J-Quants / EDINET caches under `tests/data`). Live fetch, operator `data/raw`, and GitHub Actions cron are not used by CI.
+**Current status:** Fixture engine tests + TOPIX Core30 listed universe on the site. The committed UI JSON is `--source auto --recorded` (Yahoo / J-Quants / EDINET caches under `tests/data`). Live fetch, operator `data/raw`, and GitHub Actions cron are not used by CI.
 
 Displayed data follows `public/data/meta.json`. Tickers are real TSE names from recorded caches, not live API calls. Fixture data (fictional 1001–1006) remains the default `build_public_data.py` path for engine tests. There is no GitHub Actions cron.
 
@@ -46,6 +46,28 @@ python scripts/build_public_data.py
 ```
 
 Fictional issuers 1001–1006. Used by pytest. Do not commit this over the recorded site JSON.
+
+## Expand universe (optional, not CI)
+
+4-digit TSE tickers are enough. Yahoo `.T`, J-Quants `XXXX0`, and EDINET
+`XXXX0` are derived. This does not crawl an index live and does not write
+`public/data`.
+
+```bash
+python scripts/expand_universe.py --from topix-core30 --dry-run
+python scripts/expand_universe.py --from topix-core30
+python scripts/expand_universe.py --ticker 7974 --name 7974=Nintendo
+python scripts/fetch_free_data.py --skip-existing
+python scripts/compact_yahoo_charts.py \
+  --src data/raw/yahoo --dst tests/data/yahoo \
+  --existing-only --keep-existing
+python scripts/build_public_data.py --source auto --recorded
+```
+
+`--from topix-core30` reads `scripts/providers/topix_core30.json` (recorded
+as of 2025-10-31). Names without a complete cache stay ranking-ineligible.
+Missing is not 0. EDINET still needs explicit `--date` list days; this is
+not a date-range crawl.
 
 ## Free data (optional, not CI)
 
@@ -141,12 +163,14 @@ write `public/data`, and is not CI.
 with more aligned returns (J-Quants daily AdjC vs Yahoo chart; J-Quants wins
 ties). Fundamentals per name: first complete source among EDINET
 XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
-inside one name. Recorded Yahoo charts cover ~1y of daily closes aligned to
-Nikkei 225 for all 10 universe names. Recorded EDINET yuho XBRL also covers
-all 10, so `--source auto` uses `edinet_xbrl` for fundamentals. Recorded
-J-Quants FY + AdjC cover all 10; free-plan extras have ~2 FY years and
-shorter/lagged bars, so auto still uses the longer Yahoo chart for prices
-and does not use those incomplete FY rows.
+inside one name. Recorded Yahoo charts cover TOPIX Core30. The original 10
+keep ~1y of daily closes aligned to Nikkei 225; added names are compacted
+Yahoo charts. Recorded EDINET yuho XBRL covers the original 10, so those
+names use `edinet_xbrl`. Added names use Yahoo timeseries when that cache is
+complete. Recorded J-Quants FY + AdjC cover the original 10; free-plan extras
+have ~2 FY years and shorter/lagged bars, so auto still uses the longer Yahoo
+chart for prices and does not use those incomplete FY rows. 8729 stays
+ranking-ineligible (no 3 beginning-book ROE years). Missing is not 0.
 Stock detail JSON includes per-name `priceSource` and `fundamentalsSource`.
 Ranking JSON includes the same per-name labels plus `returnCount` (aligned
 daily returns used for beta), `roeCount` (ROE history years used for

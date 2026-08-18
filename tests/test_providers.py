@@ -191,6 +191,13 @@ def test_compact_chart_dir_aligns_universe_only(tmp_path: Path):
     assert toyota["chart"]["result"][0]["indicators"]["quote"][0]["close"] == pytest.approx([10.0, 12.0])
     missing = compact_chart_dir(tmp_path / "empty", dst, universe=universe)
     assert missing == 1
+    skipped_missing = compact_chart_dir(
+        tmp_path / "empty", dst, universe=universe, existing_only=True
+    )
+    assert skipped_missing == 1
+    assert compact_chart_dir(src, dst, universe=universe, keep_existing=True) == 0
+    toyota_again = json.loads((dst / "7203.T.json").read_text(encoding="utf-8"))
+    assert toyota_again["chart"]["result"][0]["timestamp"] == [1, 3]
 
 
 def test_stooq_csv_parse_and_returns():
@@ -400,18 +407,14 @@ def test_free_snapshot_with_recorded_fundamentals_ranks(tmp_path: Path):
     softbank = by_ticker["9984"]
     assert softbank["eligible"] is True
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
-    assert set(ranked) == {
-        "7203",
-        "6758",
-        "9984",
-        "6861",
-        "6501",
-        "8035",
-        "4063",
-        "8306",
-        "9432",
-        "6098",
-    }
+    listed = {row["ticker"] for row in snapshot.stocks}
+    assert "7974" in listed
+    assert set(ranked) == listed - {"8729"}
+    assert by_ticker["8729"]["eligible"] is False
+    assert "missing_roe" in by_ticker["8729"]["exclusionReasons"]
+    assert by_ticker["8729"]["bookValue"] is not None
+    assert by_ticker["8729"]["bookValue"] != 0
+    assert by_ticker["8729"]["roeCount"] is None
     assert toyota["fundamentalsAsOf"] == "2026-03-31"
     assert toyota["priceSource"] == "yahoo_chart"
     assert toyota["fundamentalsSource"] == "yahoo_timeseries"

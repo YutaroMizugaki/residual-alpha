@@ -1,0 +1,42 @@
+{
+  "source": "topix_core30",
+  "asOf": "2025-10-31",
+  "notes": [
+    "Recorded TOPIX Core30 constituents as of the 2025-10-31 rebalance, plus Sony Financial Group 8729 (added 2025-09-29).",
+    "Used by expand_universe.py. Not a live index crawl. Not CI.",
+    "Yahoo / J-Quants / EDINET codes are derived from the 4-digit TSE ticker."
+  ],
+  "stocks": [
+    {"ticker": "2914", "companyName": "Japan Tobacco"},
+    {"ticker": "3382", "companyName": "Seven & i Holdings"},
+    {"ticker": "4063", "companyName": "Shin-Etsu Chemical"},
+    {"ticker": "4502", "companyName": "Takeda Pharmaceutical"},
+    {"ticker": "4568", "companyName": "Daiichi Sankyo"},
+    {"ticker": "6098", "companyName": "Recruit Holdings"},
+    {"ticker": "6367", "companyName": "Daikin Industries"},
+    {"ticker": "6501", "companyName": "Hitachi"},
+    {"ticker": "6503", "companyName": "Mitsubishi Electric"},
+    {"ticker": "6758", "companyName": "Sony Group"},
+    {"ticker": "6857", "companyName": "Advantest"},
+    {"ticker": "6861", "companyName": "Keyence"},
+    {"ticker": "7011", "companyName": "Mitsubishi Heavy Industries"},
+    {"ticker": "7203", "companyName": "Toyota Motor"},
+    {"ticker": "7267", "companyName": "Honda Motor"},
+    {"ticker": "7741", "companyName": "HOYA"},
+    {"ticker": "7974", "companyName": "Nintendo"},
+    {"ticker": "8001", "companyName": "Itochu"},
+    {"ticker": "8031", "companyName": "Mitsui & Co."},
+    {"ticker": "8035", "companyName": "Tokyo Electron"},
+    {"ticker": "8058", "companyName": "Mitsubishi Corporation"},
+    {"ticker": "8306", "companyName": "MUFG"},
+    {"ticker": "8316", "companyName": "Sumitomo Mitsui Financial Group"},
+    {"ticker": "8411", "companyName": "Mizuho Financial Group"},
+    {"ticker": "8729", "companyName": "Sony Financial Group"},
+    {"ticker": "8766", "companyName": "Tokio Marine Holdings"},
+    {"ticker": "9432", "companyName": "NTT"},
+    {"ticker": "9433", "companyName": "KDDI"},
+    {"ticker": "9434", "companyName": "SoftBank Corp."},
+    {"ticker": "9983", "companyName": "Fast Retailing"},
+    {"ticker": "9984", "companyName": "SoftBank Group"}
+  ]
+}

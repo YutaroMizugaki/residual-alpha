@@ -53,6 +53,7 @@ No trading
 - `scripts/fixtures/stocks.json` — fictional inputs
 - `scripts/build_public_data.py` — writes `public/data/` (site: `--source auto --recorded`)
 - `scripts/refresh_public_data.py` — optional operator fetch + rebuild (no cron)
+- `scripts/expand_universe.py` — add TSE names from 4-digit tickers or recorded TOPIX Core30 (derives Yahoo / J-Quants / EDINET codes; no fetch; no public/data)
 - `scripts/fetch_free_data.py` — optional Yahoo chart + timeseries download
 - `scripts/compact_yahoo_charts.py` — optional compact/align of Yahoo chart JSON for recorded tests (no fetch, no cron)
 - `scripts/fetch_jquants_data.py` — optional J-Quants FY summary + daily bars download
@@ -60,7 +61,7 @@ No trading
 - `scripts/fetch_edinet_list.py` — optional EDINET document list (repeat `--date`; no range crawl)
 - `scripts/fetch_edinet_xbrl.py` — optional EDINET yuho XBRL zip download
 - `scripts/compact_edinet_xbrl.py` — optional compact of EDINET yuho XBRL for recorded tests (no fetch, no cron)
-- `scripts/providers/universe.json` — 10 listed names for non-fixture sources
+- `scripts/providers/universe.json` — listed names for non-fixture sources (TOPIX Core30)
 - `tests/` — pytest (no live network)
 - `app/`, `components/`, `lib/` — Next.js display only. Ranking JSON includes per-name sources, `returnCount`, `roeCount`, `priceAsOf`, and `fundamentalsAsOf`.
 - `vercel.json` — Vercel build settings (`npm ci`, `npm run build`; reads committed `public/data`, no Python on platform)
