@@ -253,6 +253,7 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
         "8766",
         "9434",
         "7974",
+        "9983",
     }
     assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert toyota["priceSource"] == "yahoo_chart"
@@ -269,12 +270,14 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["7974"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["8766"]["eligible"] is True
     assert by_ticker["8766"]["fundamentalsSource"] == "edinet_xbrl"
-    assert by_ticker["3382"]["eligible"] is False
-    assert by_ticker["3382"]["roeCount"] == 2
-    assert "insufficient_roe_history" in by_ticker["3382"]["exclusionReasons"]
+    assert by_ticker["9983"]["eligible"] is True
+    assert by_ticker["9983"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["2914"]["eligible"] is False
+    assert by_ticker["2914"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["2914"]["roeCount"] == 2
+    assert by_ticker["2914"]["bookValue"] is not None
+    assert "insufficient_roe_history" in by_ticker["2914"]["exclusionReasons"]
     assert by_ticker["8001"]["eligible"] is True
-    assert by_ticker["2914"]["bookValue"] is None
-    assert "missing_book_value" in by_ticker["2914"]["exclusionReasons"]
 
 
 def test_edinet_without_xbrl_stays_ineligible(tmp_path: Path):
@@ -484,6 +487,7 @@ def test_recorded_extra_edinet_is_complete():
         "83160",
         "87660",
         "94340",
+        "99830",
     ]
     for code in extras:
         fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)
@@ -499,6 +503,8 @@ def test_recorded_extra_edinet_is_complete():
             "2026-03-31",
             "2026-03-20",
             "2025-03-31",
+            "2025-08-31",
+            "2025-12-31",
         }
 
 
@@ -512,6 +518,7 @@ def test_recorded_partial_edinet_is_not_padded():
         "84110",
         "94330",
         "33820",
+        "29140",
     ]
     for code in extras:
         fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)

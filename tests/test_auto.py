@@ -42,6 +42,7 @@ EDINET_COMPLETE = set(EDINET_TEN) | {
     "8316",
     "8766",
     "9434",
+    "9983",
 }
 TICKERS = EDINET_TEN
 INCOMPLETE = {"8729"}
@@ -386,7 +387,8 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
         assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["7974"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["8766"]["fundamentalsSource"] == "edinet_xbrl"
-    assert by_ticker["8001"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["9983"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["2914"]["fundamentalsSource"] == "yahoo_timeseries"
     assert by_ticker["6758"]["latestRoe"] < 0
     assert by_ticker["7267"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)

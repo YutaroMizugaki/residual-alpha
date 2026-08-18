@@ -32,6 +32,15 @@
       "docTypeCode": "'120'",
       "periodEnd": "2025-03-31",
       "xbrlFlag": "1"
+    },
+    {
+      "docID": "S100IFRS",
+      "edinetCode": "E00492",
+      "secCode": "29140",
+      "filerName": "日本たばこ産業株式会社",
+      "docTypeCode": "140",
+      "periodEnd": "2023-09-30",
+      "xbrlFlag": "1"
     }
   ]
 }

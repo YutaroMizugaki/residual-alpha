@@ -40,6 +40,7 @@ EDINET_COMPLETE = EDINET_TEN | {
     "8316",
     "8766",
     "9434",
+    "9983",
 }
 INCOMPLETE = {"8729"}
 

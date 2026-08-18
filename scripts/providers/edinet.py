@@ -10,6 +10,13 @@ from providers.errors import BotWallError, FetchError, InvalidPriceDataError
 
 
 YUHO_TYPE = "120"
+# IFRS / foreign-format annual securities reports (e.g. JT, Fast Retailing).
+YUHO_IFRS_TYPE = "140"
+YUHO_TYPES = frozenset({YUHO_TYPE, YUHO_IFRS_TYPE})
+
+
+def _is_yuho(doc: EdinetDocument) -> bool:
+    return doc.doc_type_code in YUHO_TYPES
 
 
 @dataclass(frozen=True)
@@ -82,7 +89,7 @@ def latest_yuho(documents: list[EdinetDocument], sec_code: str) -> EdinetDocumen
     matches = [
         doc
         for doc in documents
-        if doc.sec_code == wanted and doc.doc_type_code == YUHO_TYPE
+        if doc.sec_code == wanted and _is_yuho(doc)
     ]
     if not matches:
         return None
@@ -102,7 +109,7 @@ def yuho_history(
         doc
         for doc in documents
         if doc.sec_code == wanted
-        and doc.doc_type_code == YUHO_TYPE
+        and _is_yuho(doc)
         and doc.xbrl_flag != "0"
     ]
     by_period: dict[str, EdinetDocument] = {}

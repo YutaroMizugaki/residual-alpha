@@ -35,6 +35,9 @@ def test_edinet_yuho_history_unique_period_end():
     assert [doc.doc_id for doc in toyota] == ["S100AAAA"]
     sony = yuho_history(documents, "6758")
     assert [doc.doc_id for doc in sony] == ["S100CCCC"]
+    jt = yuho_history(documents, "2914")
+    assert [doc.doc_id for doc in jt] == ["S100IFRS"]
+    assert jt[0].doc_type_code == "140"
 
 
 def test_edinet_unauthorized_json_is_fetch_error():
