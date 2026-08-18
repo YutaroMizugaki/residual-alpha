@@ -254,6 +254,7 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
         "9434",
         "7974",
         "9983",
+        "3382",
     }
     assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert toyota["priceSource"] == "yahoo_chart"
@@ -517,7 +518,6 @@ def test_recorded_partial_edinet_is_not_padded():
         "80310",
         "84110",
         "94330",
-        "33820",
         "29140",
     ]
     for code in extras:

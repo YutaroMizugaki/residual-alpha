@@ -23,6 +23,7 @@ def _is_yuho(doc: EdinetDocument) -> bool:
 class EdinetDocument:
     doc_id: str
     sec_code: str | None
+    edinet_code: str | None
     filer_name: str | None
     doc_type_code: str | None
     period_end: str | None
@@ -68,6 +69,8 @@ def parse_edinet_documents(payload: Any) -> list[EdinetDocument]:
             continue
         sec = row.get("secCode")
         sec_code = None if sec in (None, "") else _normalize_sec_code(str(sec))
+        edinet = row.get("edinetCode")
+        edinet_code = None if edinet in (None, "") else str(edinet).strip()
         doc_type = row.get("docTypeCode")
         if isinstance(doc_type, str):
             doc_type = doc_type.strip().strip("'\"")
@@ -75,6 +78,7 @@ def parse_edinet_documents(payload: Any) -> list[EdinetDocument]:
             EdinetDocument(
                 doc_id=str(doc_id),
                 sec_code=sec_code,
+                edinet_code=edinet_code,
                 filer_name=None if row.get("filerName") in (None, "") else str(row.get("filerName")),
                 doc_type_code=None if doc_type in (None, "") else str(doc_type),
                 period_end=None if row.get("periodEnd") in (None, "") else str(row.get("periodEnd")),
@@ -84,12 +88,28 @@ def parse_edinet_documents(payload: Any) -> list[EdinetDocument]:
     return documents
 
 
-def latest_yuho(documents: list[EdinetDocument], sec_code: str) -> EdinetDocument | None:
+def _matches_filer(
+    doc: EdinetDocument,
+    sec_code: str,
+    *,
+    edinet_code: str | None = None,
+) -> bool:
     wanted = _normalize_sec_code(sec_code)
+    if doc.sec_code == wanted:
+        return True
+    return bool(edinet_code and doc.edinet_code == edinet_code)
+
+
+def latest_yuho(
+    documents: list[EdinetDocument],
+    sec_code: str,
+    *,
+    edinet_code: str | None = None,
+) -> EdinetDocument | None:
     matches = [
         doc
         for doc in documents
-        if doc.sec_code == wanted and _is_yuho(doc)
+        if _matches_filer(doc, sec_code, edinet_code=edinet_code) and _is_yuho(doc)
     ]
     if not matches:
         return None
@@ -101,14 +121,14 @@ def yuho_history(
     documents: list[EdinetDocument],
     sec_code: str,
     *,
+    edinet_code: str | None = None,
     limit: int = 5,
 ) -> list[EdinetDocument]:
     """Latest unique fiscal-year-end yuho filings that advertise XBRL."""
-    wanted = _normalize_sec_code(sec_code)
     matches = [
         doc
         for doc in documents
-        if doc.sec_code == wanted
+        if _matches_filer(doc, sec_code, edinet_code=edinet_code)
         and _is_yuho(doc)
         and doc.xbrl_flag != "0"
     ]

@@ -16,7 +16,7 @@ if str(SCRIPTS) not in sys.path:
 from providers.edinet import parse_edinet_documents, yuho_history  # noqa: E402
 from providers.errors import FetchError  # noqa: E402
 from providers.http import fetch_edinet_xbrl_zip  # noqa: E402
-from providers.loader import edinet_sec_code, load_universe  # noqa: E402
+from providers.loader import edinet_code, edinet_sec_code, load_universe  # noqa: E402
 
 
 def main() -> int:
@@ -48,7 +48,6 @@ def main() -> int:
         return 0
 
     universe = load_universe(Path(args.universe))
-    wanted = {edinet_sec_code(item) for item in universe["stocks"]}
     list_dir = Path(args.list_dir)
     documents = []
     if list_dir.exists():
@@ -63,8 +62,9 @@ def main() -> int:
         print("FAIL no EDINET document lists found; run fetch_edinet_list.py first")
         return 1
 
-    for code in sorted(wanted):
-        for doc in yuho_history(documents, code):
+    for item in sorted(universe["stocks"], key=lambda row: edinet_sec_code(row)):
+        code = edinet_sec_code(item)
+        for doc in yuho_history(documents, code, edinet_code=edinet_code(item)):
             dest = out_root / code
             dest.mkdir(parents=True, exist_ok=True)
             path = dest / f"{doc.doc_id}.zip"

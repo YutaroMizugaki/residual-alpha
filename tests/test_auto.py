@@ -43,6 +43,7 @@ EDINET_COMPLETE = set(EDINET_TEN) | {
     "8766",
     "9434",
     "9983",
+    "3382",
 }
 TICKERS = EDINET_TEN
 INCOMPLETE = {"8729"}
@@ -357,7 +358,8 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
             assert stock["latestRoe"] is not None
             assert stock["fundamentalsSource"] == "edinet_xbrl"
         elif stock["ticker"] in INCOMPLETE:
-            assert stock["fundamentalsSource"] == "yahoo_timeseries"
+            assert stock["fundamentalsSource"] == "edinet_xbrl"
+            assert stock["latestRoe"] is not None
         else:
             assert stock["latestRoe"] is not None
             assert stock["fundamentalsSource"] == "yahoo_timeseries"
@@ -375,8 +377,9 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
         assert listed["fundamentalsAsOf"] == by_ticker[ticker]["fundamentalsAsOf"]
         if ticker in INCOMPLETE:
             assert by_ticker[ticker]["eligible"] is False
-            assert by_ticker[ticker]["roeCount"] is None
-            assert "missing_roe" in by_ticker[ticker]["exclusionReasons"]
+            assert by_ticker[ticker]["roeCount"] == 3
+            assert "missing_shares_outstanding" in by_ticker[ticker]["exclusionReasons"]
+            assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
             continue
         assert by_ticker[ticker]["eligible"] is True
         assert by_ticker[ticker]["bookValue"] is not None
