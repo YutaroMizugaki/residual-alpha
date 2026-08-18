@@ -52,6 +52,7 @@ EDINET_COMPLETE = set(EDINET_TEN) | {
     "8031",
     "8411",
     "9433",
+    "7741",
 }
 TICKERS = EDINET_TEN
 INCOMPLETE: set[str] = set()
@@ -406,7 +407,7 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
     assert by_ticker["7203"]["fundamentalsAsOf"] == "2026-03-31"
     assert by_ticker["6861"]["fundamentalsAsOf"] == "2026-03-20"
     assert by_ticker["9432"]["price"] == pytest.approx(161.5)
-    assert snapshot.fundamentals_source == "edinet_xbrl+yahoo_timeseries"
+    assert snapshot.fundamentals_source == "edinet_xbrl"
 
 
 def test_names_without_cache_stay_ineligible_not_zero(tmp_path: Path):

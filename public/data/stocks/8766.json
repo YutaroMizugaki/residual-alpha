@@ -24,9 +24,9 @@
   "intrinsicPrice": 6153.231,
   "intrinsicUpside": -0.17295283,
   "valuationScore": 34.33,
-  "qualityScore": 9.67,
+  "qualityScore": 10.0,
   "riskScore": 13.28,
-  "totalScore": 57.28,
+  "totalScore": 57.61,
   "eligible": true,
   "exclusionReasons": [],
   "forecast": [
