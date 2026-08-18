@@ -257,6 +257,12 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
         "3382",
         "2914",
         "8729",
+        "4502",
+        "6367",
+        "7011",
+        "8031",
+        "8411",
+        "9433",
     }
     assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert toyota["priceSource"] == "yahoo_chart"
@@ -512,13 +518,7 @@ def test_recorded_extra_edinet_is_complete():
 
 def test_recorded_partial_edinet_is_not_padded():
     extras = [
-        "45020",
-        "63670",
-        "70110",
         "77410",
-        "80310",
-        "84110",
-        "94330",
     ]
     for code in extras:
         fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)

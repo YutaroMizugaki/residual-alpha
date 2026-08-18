@@ -12,6 +12,8 @@
   <xbrli:context id="Prior3YearDuration"><xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:startDate>2022-04-01</xbrli:startDate><xbrli:endDate>2023-03-31</xbrli:endDate></xbrli:period></xbrli:context>
   <xbrli:context id="Prior4YearInstant"><xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:instant>2022-03-31</xbrli:instant></xbrli:period></xbrli:context>
   <xbrli:context id="Prior4YearDuration"><xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:startDate>2021-04-01</xbrli:startDate><xbrli:endDate>2022-03-31</xbrli:endDate></xbrli:period></xbrli:context>
+  <xbrli:context id="Prior5YearInstant"><xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:instant>2021-03-31</xbrli:instant></xbrli:period></xbrli:context>
+  <xbrli:context id="Prior5YearDuration"><xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00000</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:startDate>2020-04-01</xbrli:startDate><xbrli:endDate>2021-03-31</xbrli:endDate></xbrli:period></xbrli:context>
   <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="CurrentYearInstant" unitRef="JPY" decimals="-6">3088566000000</jpigp:EquityAttributableToOwnersOfParentIFRS>
   <jpigp:ProfitLossAttributableToOwnersOfParentIFRS contextRef="CurrentYearDuration" unitRef="JPY" decimals="-6">332129000000</jpigp:ProfitLossAttributableToOwnersOfParentIFRS>
   <jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI contextRef="CurrentYearInstant" unitRef="Shares" decimals="0">3373647810</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>
@@ -19,8 +21,19 @@
   <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="Prior1YearInstant" unitRef="JPY" decimals="-6">2346702000000</jpigp:EquityAttributableToOwnersOfParentIFRS>
   <jpigp:ProfitLossAttributableToOwnersOfParentIFRS contextRef="Prior1YearDuration" unitRef="JPY" decimals="-6">245447000000</jpigp:ProfitLossAttributableToOwnersOfParentIFRS>
   <jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI contextRef="Prior1YearInstant" unitRef="Shares" decimals="0">3373647000</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>
+  <jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI contextRef="Prior1YearInstant" unitRef="Shares" decimals="0">4368500</jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI>
   <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="Prior2YearInstant" unitRef="JPY" decimals="-6">1162795000000</jpigp:EquityAttributableToOwnersOfParentIFRS>
+  <jpigp:ProfitLossAttributableToOwnersOfParentIFRS contextRef="Prior2YearDuration" unitRef="JPY" decimals="-6">222023000000</jpigp:ProfitLossAttributableToOwnersOfParentIFRS>
   <jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI contextRef="Prior2YearInstant" unitRef="Shares" decimals="0">337364000</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>
+  <jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI contextRef="Prior2YearInstant" unitRef="Shares" decimals="0">452900</jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI>
+  <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="Prior3YearInstant" unitRef="JPY" decimals="-6">1043526000000</jpigp:EquityAttributableToOwnersOfParentIFRS>
+  <jpigp:ProfitLossAttributableToOwnersOfParentIFRS contextRef="Prior3YearDuration" unitRef="JPY" decimals="-6">130451000000</jpigp:ProfitLossAttributableToOwnersOfParentIFRS>
   <jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI contextRef="Prior3YearInstant" unitRef="Shares" decimals="0">337364000</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>
+  <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="Prior4YearInstant" unitRef="JPY" decimals="-6">990734000000</jpigp:EquityAttributableToOwnersOfParentIFRS>
+  <jpigp:ProfitLossAttributableToOwnersOfParentIFRS contextRef="Prior4YearDuration" unitRef="JPY" decimals="-6">113541000000</jpigp:ProfitLossAttributableToOwnersOfParentIFRS>
   <jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI contextRef="Prior4YearInstant" unitRef="Shares" decimals="0">337364000</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>
+  <jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI contextRef="Prior4YearInstant" unitRef="Shares" decimals="0">499100</jpdei:NumberOfTreasuryStockAtTheEndOfFiscalYearDEI>
+  <jpigp:EquityAttributableToOwnersOfParentIFRS contextRef="Prior5YearInstant" unitRef="JPY" decimals="-6">1366342000000</jpigp:EquityAttributableToOwnersOfParentIFRS>
+  <jpigp:ProfitLossAttributableToOwnersOfParentIFRS contextRef="Prior5YearDuration" unitRef="JPY" decimals="-6">40639000000</jpigp:ProfitLossAttributableToOwnersOfParentIFRS>
+  <jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI contextRef="Prior5YearInstant" unitRef="Shares" decimals="0">337364000</jpdei:NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStockDEI>
 </xbrli:xbrl>
