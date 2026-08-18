@@ -243,6 +243,14 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
         "8306",
         "9432",
         "6098",
+        "4568",
+        "6503",
+        "6857",
+        "7267",
+        "8001",
+        "8058",
+        "8316",
+        "9434",
     }
     assert toyota["fundamentalsSource"] == "edinet_xbrl"
     assert toyota["priceSource"] == "yahoo_chart"
@@ -253,6 +261,15 @@ def test_edinet_snapshot_ranks_with_recorded_files(tmp_path: Path):
     assert by_ticker["6861"]["fundamentalsAsOf"] == "2026-03-20"
     assert by_ticker["6861"]["priceSource"] == "yahoo_chart"
     assert by_ticker["6861"]["fundamentalsSource"] == "edinet_xbrl"
+    assert by_ticker["7267"]["eligible"] is True
+    assert by_ticker["7267"]["latestRoe"] < 0
+    assert by_ticker["8001"]["eligible"] is True
+    assert by_ticker["7974"]["eligible"] is False
+    assert by_ticker["7974"]["bookValue"] is not None
+    assert by_ticker["7974"]["roeCount"] == 2
+    assert "insufficient_roe_history" in by_ticker["7974"]["exclusionReasons"]
+    assert by_ticker["2914"]["bookValue"] is None
+    assert "missing_book_value" in by_ticker["2914"]["exclusionReasons"]
 
 
 def test_edinet_without_xbrl_stays_ineligible(tmp_path: Path):
@@ -445,7 +462,23 @@ def test_compact_edinet_dir_universe_only(tmp_path: Path):
 
 
 def test_recorded_extra_edinet_is_complete():
-    extras = ["68610", "65010", "80350", "40630", "83060", "94320", "60980"]
+    extras = [
+        "68610",
+        "65010",
+        "80350",
+        "40630",
+        "83060",
+        "94320",
+        "60980",
+        "45680",
+        "65030",
+        "68570",
+        "72670",
+        "80010",
+        "80580",
+        "83160",
+        "94340",
+    ]
     for code in extras:
         fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)
         assert fundamentals.book_value is not None
@@ -456,4 +489,31 @@ def test_recorded_extra_edinet_is_complete():
         assert fundamentals.roe_history is not None
         assert len(fundamentals.roe_history) >= 3
         assert all(abs(value) < 2 for value in fundamentals.roe_history)
-        assert fundamentals.fiscal_year_end in {"2026-03-31", "2026-03-20"}
+        assert fundamentals.fiscal_year_end in {
+            "2026-03-31",
+            "2026-03-20",
+            "2025-03-31",
+        }
+
+
+def test_recorded_partial_edinet_is_not_padded():
+    extras = [
+        "45020",
+        "63670",
+        "70110",
+        "77410",
+        "79740",
+        "80310",
+        "84110",
+        "87660",
+        "94330",
+    ]
+    for code in extras:
+        fundamentals = parse_edinet_xbrl_dir(XBRL_DIR / code)
+        assert fundamentals.book_value is not None
+        assert fundamentals.book_value != 0
+        assert fundamentals.shares_outstanding is not None
+        assert fundamentals.latest_roe is not None
+        assert fundamentals.roe_history is not None
+        assert len(fundamentals.roe_history) == 2
+        assert all(abs(value) < 2 for value in fundamentals.roe_history)

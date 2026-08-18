@@ -175,9 +175,14 @@ original 10 names.
 parser tests. The other seven are free-plan dumps: about two FY years
 (one beginning-book ROE, not padded) and daily AdjC through the plan
 window (`priceAsOf` 2026-05-25). Recorded EDINET yuho XBRL covers the original
-10 names. 7203 / 6758 / 9984 keep synthetic four-year fixtures. The other
-seven of those 10 are compacted PublicDoc facts from 2023–2026 yuho zips (3 beginning-book
-ROE years; missing treasury is not 0). `scripts/compact_edinet_xbrl.py`
+10 names plus eight Core30 extras with 3 beginning-book ROE years
+(4568 / 6503 / 6857 / 7267 / 8001 / 8058 / 8316 / 9434). 7203 / 6758 / 9984
+keep synthetic four-year fixtures. The other seven of those 10, and those
+eight extras, are compacted PublicDoc facts from existing June list-day yuho
+zips (missing treasury is not 0). Partial extras (2 beginning-book ROE years)
+are recorded and not padded; `--source auto` uses Yahoo timeseries instead.
+2914 / 3382 / 8729 / 9983 have no yuho in those list days. Extra days use
+repeated `--date`, not a range crawl. `scripts/compact_edinet_xbrl.py`
 writes instance XML from a live zip dump; `--existing-only` skips names with
 no cache instead of failing; `--keep-existing` does not overwrite destination
 files that already exist. It does not fetch, does not invent missing names,

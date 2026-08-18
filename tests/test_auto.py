@@ -31,6 +31,16 @@ EDINET_TEN = [
     "9432",
     "6098",
 ]
+EDINET_COMPLETE = set(EDINET_TEN) | {
+    "4568",
+    "6503",
+    "6857",
+    "7267",
+    "8001",
+    "8058",
+    "8316",
+    "9434",
+}
 TICKERS = EDINET_TEN
 INCOMPLETE = {"8729"}
 EXTRAS = [ticker for ticker in TICKERS if ticker not in CORE]
@@ -340,7 +350,7 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
         assert stock["bookValue"] is not None
         assert stock["bookValue"] != 0
         assert stock["priceSource"] == "yahoo_chart"
-        if stock["ticker"] in EDINET_TEN:
+        if stock["ticker"] in EDINET_COMPLETE:
             assert stock["latestRoe"] is not None
             assert stock["fundamentalsSource"] == "edinet_xbrl"
         elif stock["ticker"] in INCOMPLETE:
@@ -351,7 +361,7 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
     computed = evaluate_universe(snapshot.stocks, snapshot.assumptions)
     by_ticker = {row["ticker"]: row for row in computed}
     ranked = [row["ticker"] for row in computed if row["rank"] is not None]
-    assert set(EDINET_TEN) <= set(ranked)
+    assert EDINET_COMPLETE <= set(ranked)
     assert "8729" not in ranked
     for ticker in tickers:
         assert by_ticker[ticker]["price"] is not None
@@ -370,10 +380,12 @@ def test_expanded_universe_recorded_caches_rank_complete_names(tmp_path: Path):
         assert by_ticker[ticker]["returnCount"] >= 199
         assert by_ticker[ticker]["roeCount"] >= 3
         assert listed["roeCount"] == by_ticker[ticker]["roeCount"]
-    for ticker in EDINET_TEN:
+    for ticker in EDINET_COMPLETE:
         assert by_ticker[ticker]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["7974"]["fundamentalsSource"] == "yahoo_timeseries"
+    assert by_ticker["8001"]["fundamentalsSource"] == "edinet_xbrl"
     assert by_ticker["6758"]["latestRoe"] < 0
+    assert by_ticker["7267"]["latestRoe"] < 0
     assert by_ticker["7203"]["bookValue"] == pytest.approx(TOYOTA_BOOK)
     assert by_ticker["7203"]["priceAsOf"] == "2026-08-17"
     assert by_ticker["7203"]["fundamentalsAsOf"] == "2026-03-31"

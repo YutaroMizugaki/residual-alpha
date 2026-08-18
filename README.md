@@ -165,9 +165,11 @@ ties). Fundamentals per name: first complete source among EDINET
 XBRL, J-Quants FY summary, then Yahoo timeseries. Sources are not mixed
 inside one name. Recorded Yahoo charts cover TOPIX Core30. The original 10
 keep ~1y of daily closes aligned to Nikkei 225; added names are compacted
-Yahoo charts. Recorded EDINET yuho XBRL covers the original 10, so those
-names use `edinet_xbrl`. Added names use Yahoo timeseries when that cache is
-complete. Recorded J-Quants FY + AdjC cover the original 10; free-plan extras
+Yahoo charts. Recorded EDINET yuho XBRL covers the original 10 plus eight
+added names with 3 beginning-book ROE years (`edinet_xbrl`). Partial yuho
+(2 ROE years) stay recorded and are not padded; auto uses Yahoo timeseries
+for those names. 2914 / 3382 / 8729 / 9983 have no yuho in the existing
+June list days. Recorded J-Quants FY + AdjC cover the original 10; free-plan extras
 have ~2 FY years and shorter/lagged bars, so auto still uses the longer Yahoo
 chart for prices and does not use those incomplete FY rows. 8729 stays
 ranking-ineligible (no 3 beginning-book ROE years). Missing is not 0.

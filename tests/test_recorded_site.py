@@ -29,6 +29,16 @@ EDINET_TEN = {
     "9432",
     "6098",
 }
+EDINET_COMPLETE = EDINET_TEN | {
+    "4568",
+    "6503",
+    "6857",
+    "7267",
+    "8001",
+    "8058",
+    "8316",
+    "9434",
+}
 INCOMPLETE = {"8729"}
 
 
@@ -77,7 +87,7 @@ def test_public_json_matches_recorded_auto_engine():
     listed = [str(item["ticker"]) for item in load_universe(UNIVERSE_PATH)["stocks"]]
     assert [row["ticker"] for row in public_rankings] == [row["ticker"] for row in expected]
     assert {row["ticker"] for row in public_rankings} == set(listed)
-    assert EDINET_TEN <= set(listed)
+    assert EDINET_COMPLETE <= set(listed)
     assert "7974" in listed
     for row in public_rankings:
         assert row["ticker"] not in {"1001", "1002", "1003", "1004", "1005", "1006"}
@@ -93,7 +103,7 @@ def test_public_json_matches_recorded_auto_engine():
         assert row["eligible"] is True
         assert row["returnCount"] >= 199
         assert row["roeCount"] >= 3
-        if row["ticker"] in EDINET_TEN:
+        if row["ticker"] in EDINET_COMPLETE:
             assert row["fundamentalsSource"] == "edinet_xbrl"
         else:
             assert row["fundamentalsSource"] == "yahoo_timeseries"

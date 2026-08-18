@@ -23,10 +23,10 @@
   "intrinsicEquityValue": 4457942.485399,
   "intrinsicPrice": 1928.443,
   "intrinsicUpside": -0.04366826,
-  "valuationScore": 41.72,
-  "qualityScore": 10.69,
+  "valuationScore": 40.34,
+  "qualityScore": 11.03,
   "riskScore": 17.23,
-  "totalScore": 69.64,
+  "totalScore": 68.61,
   "eligible": true,
   "exclusionReasons": [],
   "forecast": [
