@@ -46,6 +46,12 @@ EDINET_COMPLETE = set(EDINET_TEN) | {
     "3382",
     "2914",
     "8729",
+    "4502",
+    "6367",
+    "7011",
+    "8031",
+    "8411",
+    "9433",
 }
 TICKERS = EDINET_TEN
 INCOMPLETE: set[str] = set()
