@@ -63,6 +63,8 @@ No trading
 - `scripts/providers/universe.json` — 10 listed names for non-fixture sources
 - `tests/` — pytest (no live network)
 - `app/`, `components/`, `lib/` — Next.js display only. Ranking JSON includes per-name sources, `returnCount`, `roeCount`, `priceAsOf`, and `fundamentalsAsOf`.
+- `vercel.json` — Vercel build settings (`npm ci`, `npm run build`; reads committed `public/data`, no Python on platform)
+- `.github/workflows/deploy.yml` — optional Vercel production deploy after `test` on `main` (needs repo secrets; not a cron)
 
 ## Units
 

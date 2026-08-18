@@ -171,3 +171,40 @@ npm run dev
 ```
 
 Then open `/ranking`.
+
+## Deploy (Vercel)
+
+The UI reads committed `public/data` JSON. Vercel only needs `npm ci` and
+`npm run build`; it does not fetch Yahoo / J-Quants / EDINET and does not run
+Python. There is no GitHub Actions cron.
+
+### Option A — import the repo (recommended)
+
+1. Open [Vercel](https://vercel.com/new) and import `YutaroMizugaki/residual-alpha`.
+2. Leave the default Next.js settings (`npm ci`, `npm run build`, output `.next`).
+3. Deploy. Production tracks `main`; each merge redeploys.
+
+If you claimed a temporary deployment from the CLI, you can transfer it in the
+Vercel dashboard instead of creating a second project.
+
+### Option B — GitHub Actions deploy
+
+After creating a Vercel project, add these repository secrets:
+
+- `VERCEL_TOKEN` — [account token](https://vercel.com/account/settings/tokens)
+- `VERCEL_ORG_ID` — team or user id (`vercel project ls` or project settings)
+- `VERCEL_PROJECT_ID` — project id from Vercel project settings
+
+The `deploy` workflow runs after `test` succeeds on `main`. If the secrets are
+missing, it skips deploy (Option A still works).
+
+### One-off CLI preview (no login)
+
+```bash
+npm ci
+npm run build
+npx vercel deploy --temporary --yes --logs
+```
+
+This returns a temporary preview URL and a claim link. Temporary deployments
+expire in about 60 minutes unless claimed.
