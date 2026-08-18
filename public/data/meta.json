@@ -2,7 +2,7 @@
   "source": "auto",
   "sourceLabel": "Auto Data Provider",
   "priceSource": "yahoo_chart",
-  "fundamentalsSource": "edinet_xbrl+yahoo_timeseries",
+  "fundamentalsSource": "edinet_xbrl",
   "marketSymbol": "^N225",
   "asOfDate": "2026-08-18",
   "priceLagNote": null,

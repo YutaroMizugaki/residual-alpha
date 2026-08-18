@@ -50,6 +50,7 @@ EDINET_COMPLETE = EDINET_TEN | {
     "8031",
     "8411",
     "9433",
+    "7741",
 }
 
 
@@ -126,6 +127,6 @@ def test_public_json_matches_recorded_auto_engine():
     assert meta == snapshot.meta()
     assert meta["source"] == "auto"
     assert meta["priceSource"] == "yahoo_chart"
-    assert meta["fundamentalsSource"] == "edinet_xbrl+yahoo_timeseries"
+    assert meta["fundamentalsSource"] == "edinet_xbrl"
     assert meta["priceLagNote"] is None
     assert "Not investment advice" in meta["disclaimerEn"]
